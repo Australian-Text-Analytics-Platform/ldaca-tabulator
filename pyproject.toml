@@ -1,0 +1,11 @@
+[project]
+name = "ldaca-loader"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "jupyter>=1.1.1",
+    "notebook>=7.4.7",
+    "polar>=0.0.127",
+]
