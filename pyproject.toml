@@ -7,5 +7,11 @@ requires-python = ">=3.12"
 dependencies = [
     "jupyter>=1.1.1",
     "notebook>=7.4.7",
+    "pandas>=2.3.3",
     "polar>=0.0.127",
+    "requests>=2.32.5",
+    "rocrate-tabular",
 ]
+
+[tool.uv.sources]
+rocrate-tabular = { git = "https://github.com/Sydney-Informatics-Hub/rocrate-tabular.git" }
