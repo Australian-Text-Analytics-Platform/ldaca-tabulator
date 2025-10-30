@@ -1,4 +1,3 @@
 
-class laoder:
-
-    pass 
+class loader:
+    pass

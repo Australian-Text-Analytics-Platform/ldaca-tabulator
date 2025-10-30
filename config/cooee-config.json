@@ -1,0 +1,32 @@
+{
+  "entities": {
+    "RepositoryObject": {
+      "properties": ["name", "age", "email"]
+    },
+    "Person": {
+      "properties": ["name", "industry", "location"]
+    },
+    "Organization": {
+      "properties": ["name", "industry", "location"]
+    },
+    "Place": {
+      "properties": ["name", "industry", "location"]
+    },
+    "DefinedTerms": {
+      "properties": ["name", "industry", "location"]
+    },
+    "CreativeWork": {
+      "properties": ["name", "industry", "location"]
+    },
+    "PeopleAudience": {
+      "properties": ["name", "industry", "location"]
+    }
+  },
+  "relations": [
+    {
+      "type": "works_at",
+      "from": "Person",
+      "to": "Company"
+    }
+  ]
+}
