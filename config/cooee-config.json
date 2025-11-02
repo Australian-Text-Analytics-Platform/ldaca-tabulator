@@ -1,32 +1,64 @@
 {
-  "entities": {
-    "RepositoryObject": {
-      "properties": ["name", "age", "email"]
-    },
-    "Person": {
-      "properties": ["name", "industry", "location"]
-    },
-    "Organization": {
-      "properties": ["name", "industry", "location"]
-    },
-    "Place": {
-      "properties": ["name", "industry", "location"]
-    },
-    "DefinedTerms": {
-      "properties": ["name", "industry", "location"]
-    },
-    "CreativeWork": {
-      "properties": ["name", "industry", "location"]
-    },
-    "PeopleAudience": {
-      "properties": ["name", "industry", "location"]
-    }
-  },
-  "relations": [
-    {
-      "type": "works_at",
-      "from": "Person",
-      "to": "Company"
-    }
-  ]
+  "tables": {
+    "RepositoryObject": [
+      "ldac:linguisticGenre",
+      "temporal",
+      "locationCreated",
+      "textType",
+      "description",
+      "register",
+      "name",
+      "author",
+      "dataPublished",
+      "recipient",
+      "ldac:communicationMode",
+      "inLangauge",
+      "ldac:indexableText",
+      "ldac:mainText"
+    ],
+    "Person": [
+      "name",
+      "birthDate",
+      "local:birthDateEstimatestart",
+      "local:birthDateEstimateEnd",
+      "birthPlace",
+      "local:arrivalDate",
+      "local:arrival"
+    ],
+    "DefinedTerm": [
+      "name",
+      "description",
+      "inDefinedTermSet",
+      "sameAs"
+    ],
+    "Organization": [
+      "name",
+      "birthPlace",
+      "gender",
+      "local:arivalDate",
+      "local:arrivalDateEstimateStart",
+      "local:arrivalDateEstimateEnd",
+      "local:yearLivedinAustralia"
+    ],
+    "Place": [
+      "name",
+      "asWKT"
+    ],
+    "PeopleAudience": [
+      "name",
+      "socialClass",
+      "homeLocation"
+    ],
+    "CreativeWork": [
+      "name",
+      "datePublished",
+      "publisher",
+      "author",
+      "inLanguage",
+      "ldac:materialType",
+      "wordCount",
+      "pageStart",
+      "pageEnd"
+    ]
+  }
 }
