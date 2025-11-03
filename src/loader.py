@@ -27,7 +27,7 @@ def expand_for_entity_types(
 
     prop_types = defaultdict(set)
 
-    # --- Scan each entity’s properties
+    # Scan each entity’s properties
     for entity_id in ids:
         for prop in tabulator.fetch_properties(entity_id):
             tgt = prop.get("target_id")
@@ -42,7 +42,7 @@ def expand_for_entity_types(
             if types:
                 prop_types[prop["property_label"]].update(types)
 
-    # --- Filter to properties whose target types intersect the desired list
+    # Filter to properties whose target types intersect the desired list
     candidates = [
         prop
         for prop, types in prop_types.items()
@@ -71,7 +71,7 @@ def unzip_corpus(
     db_name: str | None = None,       # optional; defaults to <folder_name>.db
     overwrite: bool = False,) -> Tuple[Path, Path]:
     
-    # --- Resolve target names/paths
+    # Resolve target names/paths
     if folder_name is None:
         # If URL ends with "...something.zip", Path(...).stem -> "something"
         folder_name = Path(zip_url).stem or "rocrate"
@@ -82,7 +82,7 @@ def unzip_corpus(
     extract_to = cwd / folder_name
     database = cwd / db_name
 
-    # --- Prepare destination
+    # Prepare destination
     if extract_to.exists():
         if overwrite:
             shutil.rmtree(extract_to)
@@ -93,13 +93,13 @@ def unzip_corpus(
     else:
         extract_to.mkdir(parents=True, exist_ok=True)
 
-        # --- Download (in-memory) and extract
+        # Download (in-memory) and extract
         resp = requests.get(zip_url, stream=True)
         resp.raise_for_status()
         with zipfile.ZipFile(BytesIO(resp.content)) as zf:
             zf.extractall(extract_to)
 
-    # --- Build (or connect) DB via the tabulator’s convenience method
+    # Build (or connect) DB via the tabulator’s convenience method
     tb.crate_to_db(str(extract_to), str(database))
 
     return database, extract_to
