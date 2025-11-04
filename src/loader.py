@@ -9,13 +9,62 @@ from pathlib import Path
 from typing import Tuple
 import shutil
 
+def unzip_corpus(
+    zip_url: str,
+    tb,                               # an instance: tb = ROCrateTabulator()
+    folder_name: str | None = None,   # optional; defaults to URL stem
+    db_name: str | None = None,       # optional; defaults to <folder_name>.db
+    overwrite: bool = False,) -> Tuple[Path, Path]:
+    
+    # Resolve target names/paths
+    if folder_name is None:
+        # If URL ends with "...something.zip", Path(...).stem -> "something"
+        folder_name = Path(zip_url).stem or "rocrate"
+    if db_name is None:
+        db_name = f"{folder_name}.db"
+
+    cwd = Path.cwd()
+    extract_to = cwd / folder_name
+    database = cwd / db_name
+
+    # Prepare destination
+    if extract_to.exists():
+        if overwrite:
+            shutil.rmtree(extract_to)
+            extract_to.mkdir(parents=True, exist_ok=True)
+        else:
+            # Folder already present; skip re-download/re-extract
+            extract_to.mkdir(parents=True, exist_ok=True)
+    else:
+        extract_to.mkdir(parents=True, exist_ok=True)
+
+        # Download (in-memory) and extract
+        resp = requests.get(zip_url, stream=True)
+        resp.raise_for_status()
+        with zipfile.ZipFile(BytesIO(resp.content)) as zf:
+            zf.extractall(extract_to)
+
+    # Build (or connect) DB via the tabulator’s convenience method
+    tb.crate_to_db(str(extract_to), str(database))
+
+    return database, extract_to
+
 
 def expand_for_entity_types(
     tabulator: ROCrateTabulator,
     table: str,
-    target_types: list[str],
+    #target_types: list[str],
     sample: int | None = None,
     verbose: bool = True,):
+
+    # prepare tables
+    tabulator.infer_config() # Not sure if I need this here. Need to check
+    target_types = list(tabulator.config["potential_tables"])
+
+    if "Language" in target_types:
+        target_types.remove("Language")
+
+    tabulator.use_tables(target_types)
 
     config = tabulator.config["tables"][table]
     if not config.get("all_props"):
@@ -64,42 +113,3 @@ def expand_for_entity_types(
     return prop_types
 
 
-def unzip_corpus(
-    zip_url: str,
-    tb,                               # an instance: tb = ROCrateTabulator()
-    folder_name: str | None = None,   # optional; defaults to URL stem
-    db_name: str | None = None,       # optional; defaults to <folder_name>.db
-    overwrite: bool = False,) -> Tuple[Path, Path]:
-    
-    # Resolve target names/paths
-    if folder_name is None:
-        # If URL ends with "...something.zip", Path(...).stem -> "something"
-        folder_name = Path(zip_url).stem or "rocrate"
-    if db_name is None:
-        db_name = f"{folder_name}.db"
-
-    cwd = Path.cwd()
-    extract_to = cwd / folder_name
-    database = cwd / db_name
-
-    # Prepare destination
-    if extract_to.exists():
-        if overwrite:
-            shutil.rmtree(extract_to)
-            extract_to.mkdir(parents=True, exist_ok=True)
-        else:
-            # Folder already present; skip re-download/re-extract
-            extract_to.mkdir(parents=True, exist_ok=True)
-    else:
-        extract_to.mkdir(parents=True, exist_ok=True)
-
-        # Download (in-memory) and extract
-        resp = requests.get(zip_url, stream=True)
-        resp.raise_for_status()
-        with zipfile.ZipFile(BytesIO(resp.content)) as zf:
-            zf.extractall(extract_to)
-
-    # Build (or connect) DB via the tabulator’s convenience method
-    tb.crate_to_db(str(extract_to), str(database))
-
-    return database, extract_to
