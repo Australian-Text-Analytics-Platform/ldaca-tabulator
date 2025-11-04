@@ -8,6 +8,7 @@ import itertools
 from pathlib import Path
 from typing import Tuple
 import shutil
+import json
 
 def unzip_corpus(
     zip_url: str,
@@ -62,7 +63,7 @@ def expand_for_entity_types(
     target_types = list(tabulator.config["potential_tables"])
 
     if "Language" in target_types:
-        target_types.remove("Language")
+        target_types.remove("Language") # maybe we need to remove Repository Object form the list to make sure we are not expanding RepoObject again
 
     tabulator.use_tables(target_types)
 
@@ -106,10 +107,15 @@ def expand_for_entity_types(
 
     if verbose:
         print(f"Expanding {len(candidates)} properties:", candidates)
+    
+    # TODO 
+    # We need to bring text to the to the table
 
     # Expand and rebuild table
     tabulator.expand_properties(table, candidates)
     tabulator.entity_table(table)
     return prop_types
 
+#def clean_dataframe(DataFrame, config_file):
+    
 

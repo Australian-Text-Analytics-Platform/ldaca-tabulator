@@ -1,64 +1,247 @@
 {
   "tables": {
-    "RepositoryObject": [
-      "ldac:linguisticGenre",
-      "temporal",
-      "locationCreated",
-      "textType",
-      "description",
-      "register",
-      "name",
-      "author",
-      "dataPublished",
-      "recipient",
-      "ldac:communicationMode",
-      "inLangauge",
-      "ldac:indexableText",
-      "ldac:mainText"
-    ],
-    "Person": [
-      "name",
-      "birthDate",
-      "local:birthDateEstimatestart",
-      "local:birthDateEstimateEnd",
-      "birthPlace",
-      "local:arrivalDate",
-      "local:arrival"
-    ],
-    "DefinedTerm": [
-      "name",
-      "description",
-      "inDefinedTermSet",
-      "sameAs"
-    ],
-    "Organization": [
-      "name",
-      "birthPlace",
-      "gender",
-      "local:arivalDate",
-      "local:arrivalDateEstimateStart",
-      "local:arrivalDateEstimateEnd",
-      "local:yearLivedinAustralia"
-    ],
-    "Place": [
-      "name",
-      "asWKT"
-    ],
-    "PeopleAudience": [
-      "name",
-      "socialClass",
-      "homeLocation"
-    ],
-    "CreativeWork": [
-      "name",
-      "datePublished",
-      "publisher",
-      "author",
-      "inLanguage",
-      "ldac:materialType",
-      "wordCount",
-      "pageStart",
-      "pageEnd"
-    ]
+    "Person": {
+      "properties": [
+        "description",
+        "local:arrivalDateEstimateStart",
+        "homeLocation",
+        "birthPlace",
+        "local:yearsLivedInAustralia",
+        "@type",
+        "local:socialClass",
+        "socialClass",
+        "name",
+        "local:arrivalDate",
+        "local:birthDateEstimateStart",
+        "prov:specializationOf",
+        "gender",
+        "local:birthDateEstimateEnd",
+        "birthDate",
+        "local:arrivalDateEstimateEnd",
+        "ldac:age"
+      ]
+    },
+    "CreativeWork": {
+      "properties": [
+        "pageEnd",
+        "conformsTo",
+        "ldac:materialType",
+        "wordCount",
+        "isPartOf",
+        "identifier",
+        "publisher",
+        "@type",
+        "name",
+        "pageStart",
+        "datePublished",
+        "subjectLanguage",
+        "inLanguage",
+        "author",
+        "about"
+      ]
+    },
+    "Organization": {
+      "properties": [
+        "name",
+        "local:arrivalDate",
+        "local:arrivalDateEstimateStart",
+        "birthPlace",
+        "local:yearsLivedInAustralia",
+        "gender",
+        "@type",
+        "local:arrivalDateEstimateEnd"
+      ]
+    },
+    "Book": {
+      "properties": [
+        "@type",
+        "datePublished",
+        "name",
+        "publisher"
+      ]
+    },
+    "Dataset": {
+      "properties": [
+        "conformsTo",
+        "ldac:hasCollectionProtocol",
+        "temporalCoverage",
+        "description",
+        "isBasedOn",
+        "publisher",
+        "ldac:subjectLanguage",
+        "@type",
+        "name",
+        "license",
+        "citation",
+        "datePublished",
+        "dct:rightsHolder",
+        "pcdm:hasMember",
+        "accountablePerson",
+        "inLanguage",
+        "hasPart",
+        "ldac:doi",
+        "author"
+      ]
+    },
+    "ldac:DataReuseLicense": {
+      "properties": [
+        "description",
+        "@type",
+        "name"
+      ]
+    },
+    "File": {
+      "properties": [
+        "encodingFormat",
+        "description",
+        "ldac:communicationMode",
+        "contentSize",
+        "@type",
+        "name",
+        "datePublished",
+        "ldac:annotationOf",
+        "materialType",
+        "inLanguage",
+        "dateModified",
+        "author"
+      ]
+    },
+    "ldac:CollectionProtocol": {
+      "properties": [
+        "name",
+        "encodingFormat",
+        "description",
+        "datePublished",
+        "contentSize",
+        "dateModified",
+        "author",
+        "@type"
+      ]
+    },
+    "WebPage": {
+      "properties": [
+        "@type",
+        "name"
+      ]
+    },
+    "Standard": {
+      "properties": [
+        "@type",
+        "name"
+      ]
+    },
+    "Place": {
+      "properties": [
+        "name",
+        "asWKT",
+        "@type"
+      ]
+    },
+    "rdf:Property": {
+      "properties": [
+        "rdfs:comment",
+        "rdfs:label",
+        "range",
+        "@type"
+      ]
+    },
+    "DefinedTermSet": {
+      "properties": [
+        "name",
+        "@type"
+      ]
+    },
+    "RepositoryCollection": {
+      "properties": [
+        "conformsTo",
+        "ldac:hasCollectionProtocol",
+        "temporalCoverage",
+        "description",
+        "isBasedOn",
+        "publisher",
+        "ldac:subjectLanguage",
+        "@type",
+        "name",
+        "license",
+        "citation",
+        "datePublished",
+        "dct:rightsHolder",
+        "pcdm:hasMember",
+        "accountablePerson",
+        "inLanguage",
+        "hasPart",
+        "ldac:doi",
+        "author"
+      ]
+    },
+    "DefinedTerm": {
+      "properties": [
+        "name",
+        "sameAs",
+        "description",
+        "rdfs:label",
+        "rdfs:subClassOf",
+        "@type",
+        "inDefinedTermSet"
+      ]
+    },
+    "Geometry": {
+      "properties": [
+        "@type",
+        "name",
+        "asWKT"
+      ]
+    },
+    "RepositoryObject": {
+      "properties": [
+        "dateCreated",
+        "ldac:indexableText",
+        "conformsTo",
+        "description",
+        "locationCreated",
+        "ldac:communicationMode",
+        "identifier",
+        "temporal",
+        "@type",
+        "recipient",
+        "textType",
+        "datePublished",
+        "register",
+        "ldac:mainText",
+        "hasPart",
+        "ldac:linguisticGenre",
+        "name",
+        "citation",
+        "inLanguage",
+        "author"
+      ]
+    },
+    "PeopleAudience": {
+      "properties": [
+        "socialClass",
+        "name",
+        "homeLocation",
+        "@type"
+      ]
+    },
+    "SoftwareSourceCode": {
+      "properties": [
+        "name",
+        "runtimePlarform",
+        "codeRepository",
+        "description",
+        "@type",
+        "programmingLanguage"
+      ]
+    },
+    "CreateAction": {
+      "properties": [
+        "object",
+        "name",
+        "result",
+        "@type",
+        "instrument"
+      ]
+    }
   }
 }
