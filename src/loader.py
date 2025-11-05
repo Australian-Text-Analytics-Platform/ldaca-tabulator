@@ -55,7 +55,7 @@ def expand_for_entity_types(
     table: str,
     folder_name: str,
     db_name: str,
-    sample: int | None = None,
+    #sample: int | None = None,
     verbose: bool = True,
 ):
 
@@ -77,8 +77,8 @@ def expand_for_entity_types(
         tb.entity_table(table)
 
     ids = tb.fetch_ids(table)
-    if sample:
-        ids = itertools.islice(ids, sample)
+    #if sample:
+        #ids = itertools.islice(ids, sample)
 
     prop_types = defaultdict(set)
 
@@ -114,7 +114,7 @@ def expand_for_entity_types(
         print(f"Expanding {len(candidates)} properties:", candidates)
     
     # TODO 
-    # We need to bring text to the to the table
+    # We need to bring text to the table
 
     # Expand and rebuild table
     tb.expand_properties(table, candidates)
