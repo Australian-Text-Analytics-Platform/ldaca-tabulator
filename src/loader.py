@@ -113,7 +113,8 @@ def expand_for_entity_types(
 
     # Expand and rebuild table
     tb.expand_properties(table, candidates)
-    tb.entity_table(table)
+    # Adding text to the table
+    tb.entity_table(table, "ldac:indexableText")
 
     # Read data from DB
     with sqlite3.connect(database) as conn:
@@ -134,10 +135,13 @@ def expand_for_entity_types(
                 combined_props.append(f"{prop_name}_{subprop}")
     combined_props
 
+
     # TODO Why is some columns in df and combined_props not matching
     clean_data = pd.concat([df[config['tables']['RepositoryObject']['properties']],
                             df[list(set(combined_props) & set(df.columns))]],
                             axis=1)
+    
+
     
     return prop_types, clean_data
     
