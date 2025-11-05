@@ -54,12 +54,16 @@ def unzip_corpus(
     return database, extract_to
 
 
-def expand_for_entity_types(
-    tabulator: ROCrateTabulator,
-    table: str,
-    #target_types: list[str],
-    sample: int | None = None,
-    verbose: bool = True,):
+def expand_for_entity_types(zip_url,
+                            table: str,
+                            folder_name,
+                            db_name,
+                            sample: int | None = None,
+                            verbose: bool = True):
+
+    tb = ROCrateTabulator
+
+    database, extract_to = unzip_corpus(zip_url, tb, folder_name= folder_name, db_name= db_name)
 
     # prepare tables
     tabulator.infer_config() # Not sure if I need this here. Need to check
