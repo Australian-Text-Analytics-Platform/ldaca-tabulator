@@ -124,7 +124,7 @@ def expand_for_entity_types(
     with sqlite3.connect(database) as conn:
         df = pd.read_sql(f"SELECT * FROM {table}", conn)
     
-
+    
     with open("./config/config.json") as f:
         config = json.load(f)
     
@@ -137,35 +137,13 @@ def expand_for_entity_types(
             subprops = config["tables"][target_type]["properties"]
             for subprop in subprops:
                 combined_props.append(f"{prop_name}_{subprop}")
-
-    # print all combined results
-    clean_data = df[combined_props]
-
-    return prop_types, clean_data
-
-
-
-
-
-
-
-
-def clean_dataframe(DataFrame, config_file):
-    
-    with open(config_file) as f:
-        config = json.load(f)
-    
-    result = [(key, v) for key, val in type_map.items() for v in val]
-    combined_props = []
-
-    for prop_name, target_type in result:
-        # Only proceed if target_type exists in config["tables"]
-        if target_type in config["tables"]:
-            subprops = config["tables"][target_type]["properties"]
-            for subprop in subprops:
-                combined_props.append(f"{prop_name}_{subprop}")
-
-    # print all combined results
     combined_props
+
+    # TODO Why is some columns in df and combined_props not matching
+    clean_data = pd.concat([df[config['tables']['RepositoryObject']['properties']],
+                            df[list(set(combined_props) & set(df.columns))]],
+                            axis=1)
+    
+    return prop_types, clean_data
     
 
