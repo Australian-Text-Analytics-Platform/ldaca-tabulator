@@ -15,14 +15,14 @@ import sqlite3
 
 def unzip_corpus(
     zip_url: str,
-    tb,                               # an instance: tb = ROCrateTabulator()
-    folder_name: str | None = None,   # optional; defaults to URL stem
-    db_name: str | None = None,       # optional; defaults to <folder_name>.db
-    overwrite: bool = False,) -> Tuple[Path, Path]:
-    
+    tb: ROCrateTabulator,
+    folder_name: str | None = None,
+    db_name: str | None = None,
+    overwrite: bool = False,
+):
+
     # Resolve target names/paths
     if folder_name is None:
-        # If URL ends with "...something.zip", Path(...).stem -> "something"
         folder_name = Path(zip_url).stem or "rocrate"
     if db_name is None:
         db_name = f"{folder_name}.db"
@@ -36,49 +36,47 @@ def unzip_corpus(
         if overwrite:
             shutil.rmtree(extract_to)
             extract_to.mkdir(parents=True, exist_ok=True)
-        else:
-            # Folder already present; skip re-download/re-extract
-            extract_to.mkdir(parents=True, exist_ok=True)
     else:
         extract_to.mkdir(parents=True, exist_ok=True)
 
-        # Download (in-memory) and extract
+        # Download and extract
         resp = requests.get(zip_url, stream=True)
         resp.raise_for_status()
         with zipfile.ZipFile(BytesIO(resp.content)) as zf:
             zf.extractall(extract_to)
 
-    # Build (or connect) DB via the tabulator’s convenience method
+    # Build (or connect) DB
     tb.crate_to_db(str(extract_to), str(database))
-
     return database, extract_to
 
 
-def expand_for_entity_types(zip_url,
-                            table: str,
-                            folder_name,
-                            db_name,
-                            sample: int | None = None,
-                            verbose: bool = True):
+def expand_for_entity_types(
+    zip_url: str,
+    table: str,
+    folder_name: str,
+    db_name: str,
+    sample: int | None = None,
+    verbose: bool = True,
+):
 
-    tb = ROCrateTabulator
+    tb = ROCrateTabulator()
 
     database, extract_to = unzip_corpus(zip_url, tb, folder_name= folder_name, db_name= db_name)
 
     # prepare tables
-    tabulator.infer_config() # Not sure if I need this here. Need to check
-    target_types = list(tabulator.config["potential_tables"])
+    tb.infer_config() # Not sure if I need this here. Need to check
+    target_types = list(tb.config["potential_tables"])
 
     if "Language" in target_types:
         target_types.remove("Language") # maybe we need to remove Repository Object form the list to make sure we are not expanding RepoObject again
 
-    tabulator.use_tables(target_types)
+    tb.use_tables(target_types)
 
-    config = tabulator.config["tables"][table]
+    config = tb.config["tables"][table]
     if not config.get("all_props"):
-        tabulator.entity_table(table)
+        tb.entity_table(table)
 
-    ids = tabulator.fetch_ids(table)
+    ids = tb.fetch_ids(table)
     if sample:
         ids = itertools.islice(ids, sample)
 
@@ -86,14 +84,14 @@ def expand_for_entity_types(zip_url,
 
     # Scan each entity’s properties
     for entity_id in ids:
-        for prop in tabulator.fetch_properties(entity_id):
+        for prop in tb.fetch_properties(entity_id):
             tgt = prop.get("target_id")
             if not tgt:
                 continue
             # Get all @type values for the target
             types = {
                 p["value"]
-                for p in tabulator.fetch_properties(tgt)
+                for p in tb.fetch_properties(tgt)
                 if p["property_label"] == "@type"
             }
             if types:
@@ -119,9 +117,14 @@ def expand_for_entity_types(zip_url,
     # We need to bring text to the to the table
 
     # Expand and rebuild table
-    tabulator.expand_properties(table, candidates)
-    tabulator.entity_table(table)
-    return prop_types
+    tb.expand_properties(table, candidates)
+    tb.entity_table(table)
+
+    # Read data from DB
+    with sqlite3.connect(database) as conn:
+        df = pd.read_sql(f"SELECT * FROM {table}", conn)
+
+    return prop_types, df
 
 
 
