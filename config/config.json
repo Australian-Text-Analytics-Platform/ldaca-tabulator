@@ -7,7 +7,6 @@
         "homeLocation",
         "birthPlace",
         "local:yearsLivedInAustralia",
-        "@type",
         "local:socialClass",
         "socialClass",
         "name",
@@ -24,18 +23,14 @@
     "CreativeWork": {
       "properties": [
         "pageEnd",
-        "conformsTo",
         "ldac:materialType",
         "wordCount",
         "isPartOf",
         "identifier",
         "publisher",
-        "@type",
         "name",
         "pageStart",
         "datePublished",
-        "subjectLanguage",
-        "inLanguage",
         "author",
         "about"
       ]
@@ -48,13 +43,11 @@
         "birthPlace",
         "local:yearsLivedInAustralia",
         "gender",
-        "@type",
         "local:arrivalDateEstimateEnd"
       ]
     },
     "Book": {
       "properties": [
-        "@type",
         "datePublished",
         "name",
         "publisher"
@@ -62,44 +55,34 @@
     },
     "Dataset": {
       "properties": [
-        "conformsTo",
         "ldac:hasCollectionProtocol",
         "temporalCoverage",
         "description",
-        "isBasedOn",
         "publisher",
         "ldac:subjectLanguage",
-        "@type",
         "name",
         "license",
         "citation",
         "datePublished",
         "dct:rightsHolder",
-        "pcdm:hasMember",
         "accountablePerson",
         "inLanguage",
-        "hasPart",
-        "ldac:doi",
         "author"
       ]
     },
     "ldac:DataReuseLicense": {
       "properties": [
         "description",
-        "@type",
         "name"
       ]
     },
     "File": {
       "properties": [
-        "encodingFormat",
         "description",
         "ldac:communicationMode",
         "contentSize",
-        "@type",
         "name",
         "datePublished",
-        "ldac:annotationOf",
         "materialType",
         "inLanguage",
         "dateModified",
@@ -109,85 +92,66 @@
     "ldac:CollectionProtocol": {
       "properties": [
         "name",
-        "encodingFormat",
         "description",
         "datePublished",
         "contentSize",
         "dateModified",
-        "author",
-        "@type"
+        "author"
       ]
     },
     "WebPage": {
       "properties": [
-        "@type",
         "name"
       ]
     },
     "Standard": {
       "properties": [
-        "@type",
         "name"
       ]
     },
     "Place": {
       "properties": [
         "name",
-        "asWKT",
-        "@type"
+        "asWKT"
       ]
     },
     "rdf:Property": {
       "properties": [
         "rdfs:comment",
         "rdfs:label",
-        "range",
-        "@type"
+        "range"
       ]
     },
     "DefinedTermSet": {
       "properties": [
-        "name",
-        "@type"
+        "name"
       ]
     },
     "RepositoryCollection": {
       "properties": [
-        "conformsTo",
         "ldac:hasCollectionProtocol",
         "temporalCoverage",
         "description",
-        "isBasedOn",
         "publisher",
         "ldac:subjectLanguage",
-        "@type",
         "name",
         "license",
         "citation",
         "datePublished",
         "dct:rightsHolder",
-        "pcdm:hasMember",
         "accountablePerson",
         "inLanguage",
-        "hasPart",
-        "ldac:doi",
         "author"
       ]
     },
     "DefinedTerm": {
       "properties": [
         "name",
-        "sameAs",
-        "description",
-        "rdfs:label",
-        "rdfs:subClassOf",
-        "@type",
-        "inDefinedTermSet"
+        "description"
       ]
     },
     "Geometry": {
       "properties": [
-        "@type",
         "name",
         "asWKT"
       ]
@@ -196,19 +160,16 @@
       "properties": [
         "dateCreated",
         "ldac:indexableText",
-        "conformsTo",
         "description",
         "locationCreated",
         "ldac:communicationMode",
         "identifier",
         "temporal",
-        "@type",
         "recipient",
         "textType",
         "datePublished",
         "register",
         "ldac:mainText",
-        "hasPart",
         "ldac:linguisticGenre",
         "name",
         "citation",
@@ -220,27 +181,7 @@
       "properties": [
         "socialClass",
         "name",
-        "homeLocation",
-        "@type"
-      ]
-    },
-    "SoftwareSourceCode": {
-      "properties": [
-        "name",
-        "runtimePlarform",
-        "codeRepository",
-        "description",
-        "@type",
-        "programmingLanguage"
-      ]
-    },
-    "CreateAction": {
-      "properties": [
-        "object",
-        "name",
-        "result",
-        "@type",
-        "instrument"
+        "homeLocation"
       ]
     }
   }

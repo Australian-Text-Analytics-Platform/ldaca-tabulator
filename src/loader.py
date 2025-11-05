@@ -9,6 +9,9 @@ from pathlib import Path
 from typing import Tuple
 import shutil
 import json
+import pandas as pd 
+import sqlite3
+
 
 def unzip_corpus(
     zip_url: str,
@@ -116,6 +119,29 @@ def expand_for_entity_types(
     tabulator.entity_table(table)
     return prop_types
 
-#def clean_dataframe(DataFrame, config_file):
+
+
+
+
+
+
+
+def clean_dataframe(DataFrame, config_file):
+    
+    with open(config_file) as f:
+        config = json.load(f)
+    
+    result = [(key, v) for key, val in type_map.items() for v in val]
+    combined_props = []
+
+    for prop_name, target_type in result:
+        # Only proceed if target_type exists in config["tables"]
+        if target_type in config["tables"]:
+            subprops = config["tables"][target_type]["properties"]
+            for subprop in subprops:
+                combined_props.append(f"{prop_name}_{subprop}")
+
+    # print all combined results
+    combined_props
     
 
