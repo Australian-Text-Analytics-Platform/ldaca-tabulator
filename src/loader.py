@@ -4,9 +4,7 @@ import requests
 from io import BytesIO
 from rocrate_tabular.tabulator import ROCrateTabulator
 from collections import defaultdict
-import itertools
 from pathlib import Path
-from typing import Tuple
 import shutil
 import json
 import pandas as pd 
@@ -55,7 +53,6 @@ def expand_for_entity_types(
     table: str,
     folder_name: str,
     db_name: str,
-    #sample: int | None = None,
     verbose: bool = True,
 ):
 
@@ -77,8 +74,6 @@ def expand_for_entity_types(
         tb.entity_table(table)
 
     ids = tb.fetch_ids(table)
-    #if sample:
-        #ids = itertools.islice(ids, sample)
 
     prop_types = defaultdict(set)
 
