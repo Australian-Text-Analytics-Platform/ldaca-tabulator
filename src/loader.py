@@ -123,8 +123,25 @@ def expand_for_entity_types(
     # Read data from DB
     with sqlite3.connect(database) as conn:
         df = pd.read_sql(f"SELECT * FROM {table}", conn)
+    
 
-    return prop_types, df
+    with open("./config/config.json") as f:
+        config = json.load(f)
+    
+    result = [(key, v) for key, val in prop_types.items() for v in val]
+    combined_props = []
+
+    for prop_name, target_type in result:
+        # Only proceed if target_type exists in config["tables"]
+        if target_type in config["tables"]:
+            subprops = config["tables"][target_type]["properties"]
+            for subprop in subprops:
+                combined_props.append(f"{prop_name}_{subprop}")
+
+    # print all combined results
+    clean_data = df[combined_props]
+
+    return prop_types, clean_data
 
 
 
