@@ -50,23 +50,24 @@ def unzip_corpus(
 
 def expand_for_entity_types(
     zip_url: str,
-    table: str,
-    folder_name: str,
-    db_name: str,
+    #table: str,
+    #folder_name: str,
+    #db_name: str,
     verbose: bool = True,
 ):
 
     tb = ROCrateTabulator()
 
-    database, extract_to = unzip_corpus(zip_url, tb, folder_name= folder_name, db_name= db_name)
+    database, extract_to = unzip_corpus(zip_url, tb)
 
     # prepare tables
-    tb.infer_config() # Not sure if I need this here. Need to check
+    tb.infer_config() 
     target_types = list(tb.config["potential_tables"])
 
     if "Language" in target_types:
         target_types.remove("Language") # maybe we need to remove Repository Object form the list to make sure we are not expanding RepoObject again
 
+    table = "RepositoryObject"
     tb.use_tables(target_types)
 
     config = tb.config["tables"][table]
