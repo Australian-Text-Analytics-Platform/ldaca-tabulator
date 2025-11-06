@@ -21,7 +21,7 @@ def unzip_corpus(
 
     # Resolve target names/paths
     if folder_name is None:
-        folder_name = Path(zip_url).stem or "rocrate"
+        folder_name = "rocrate"
     if db_name is None:
         db_name = f"{folder_name}.db"
 
@@ -50,9 +50,6 @@ def unzip_corpus(
 
 def expand_for_entity_types(
     zip_url: str,
-    #table: str,
-    #folder_name: str,
-    #db_name: str,
     verbose: bool = True,
 ):
 
