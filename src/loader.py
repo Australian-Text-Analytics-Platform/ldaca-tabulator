@@ -62,7 +62,7 @@ def expand_for_entity_types(
     target_types = list(tb.config["potential_tables"])
 
     if "Language" in target_types:
-        target_types.remove("Language") # maybe we need to remove Repository Object form the list to make sure we are not expanding RepoObject again
+        target_types.remove("Language") 
 
     table = "RepositoryObject"
     tb.use_tables(target_types)
@@ -105,9 +105,6 @@ def expand_for_entity_types(
 
     if verbose:
         print(f"Expanding {len(candidates)} properties:", candidates)
-    
-    # TODO 
-    # We need to bring text to the table
 
     # Expand and rebuild table
     tb.expand_properties(table, candidates)
