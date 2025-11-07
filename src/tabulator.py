@@ -39,5 +39,5 @@ print(df2.head)
 
 '''
 
-class Tabulator:
+class LDaCATabulator:
     pass
