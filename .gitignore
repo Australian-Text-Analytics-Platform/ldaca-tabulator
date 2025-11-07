@@ -1,0 +1,6 @@
+
+# ignore corpus 
+rocrate/
+
+# ignore db
+rocrate.db
