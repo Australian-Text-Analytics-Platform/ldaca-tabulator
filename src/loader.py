@@ -132,10 +132,19 @@ def expand_for_entity_types(
 
 
     # TODO Why is some columns in df and combined_props not matching
-    clean_data = pd.concat([df[config['tables']['RepositoryObject']['properties']],
-                            df[list(set(combined_props) & set(df.columns))]],
-                            axis=1)
-    
+    # Get only those RepositoryObject properties that exist in df
+    repo_props = [
+    p for p in config['tables']['RepositoryObject']['properties'] 
+    if p in df.columns
+    ]
+
+    valid_combined_props = list(set(combined_props) & set(df.columns))
+
+    # Concatenate
+    clean_data = pd.concat(
+        [df[repo_props], df[valid_combined_props]],
+    axis=1
+    )
 
     
     return prop_types, clean_data
