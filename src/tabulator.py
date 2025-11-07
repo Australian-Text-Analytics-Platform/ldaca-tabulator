@@ -1,5 +1,5 @@
 from rocrate_tabular.tabulator import ROCrateTabulator
-from utils import unzip_corpus
+from src.utils import unzip_corpus
 from collections import defaultdict
 import json
 import pandas as pd 
@@ -46,39 +46,38 @@ print(df2.head)
 class LDaCATabulator:
     def __init__(self, url):
         self.url = url
+        self.tb = ROCrateTabulator()
+        self.database, self.extract_to = unzip_corpus(self.url, tb=self.tb)
 
     def build_table(self, verbose: bool = True):  # this could be function for Alex app
-        tb = ROCrateTabulator()
-        database, extract_to = unzip_corpus(self.url, tb=tb)
-
         # prepare tables
-        tb.infer_config()
-        target_types = list(tb.config["potential_tables"])
+        self.tb.infer_config()
+        target_types = list(self.tb.config["potential_tables"])
 
         if "Language" in target_types:
             target_types.remove("Language")
 
         table = "RepositoryObject"
-        tb.use_tables(target_types)
+        self.tb.use_tables(target_types)
 
-        config = tb.config["tables"][table]
+        config = self.tb.config["tables"][table]
         if not config.get("all_props"):
-            tb.entity_table(table)
+            self.tb.entity_table(table)
 
-        ids = tb.fetch_ids(table)
+        ids = self.tb.fetch_ids(table)
 
         prop_types = defaultdict(set)
 
         # Scan each entity’s properties
         for entity_id in ids:
-            for prop in tb.fetch_properties(entity_id):
+            for prop in self.tb.fetch_properties(entity_id):
                 tgt = prop.get("target_id")
                 if not tgt:
                     continue
                 # Get all @type values for the target
                 types = {
                     p["value"]
-                    for p in tb.fetch_properties(tgt)
+                    for p in self.tb.fetch_properties(tgt)
                     if p["property_label"] == "@type"
                 }
                 if types:
@@ -101,12 +100,12 @@ class LDaCATabulator:
             print(f"Expanding {len(candidates)} properties:", candidates)
 
         # Expand and rebuild table
-        tb.expand_properties(table, candidates)
+        self.tb.expand_properties(table, candidates)
         # Adding text to the table
-        tb.entity_table(table, "ldac:indexableText")
+        self.tb.entity_table(table, "ldac:indexableText")
 
         # Read data from DB
-        with sqlite3.connect(database) as conn:
+        with sqlite3.connect(self.database) as conn:
             df = pd.read_sql(f"SELECT * FROM {table}", conn)
 
         with open("./config/config.json") as f:
