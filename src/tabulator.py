@@ -54,6 +54,7 @@ class LDaCATabulator:
         self.tb.infer_config()
         target_types = list(self.tb.config["potential_tables"])
 
+        # TODO bug in rocrate-tabulator 
         if "Language" in target_types:
             target_types.remove("Language")
 
@@ -141,6 +142,14 @@ class LDaCATabulator:
 
     ############################### specific data user may need can use these functions
     def get_text():
+        pass
+
+    def get_csv():
+        pass
+    
+
+    # xml files are not that common
+    def get_xml(): 
         pass
 
     def get_people():
