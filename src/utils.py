@@ -40,3 +40,4 @@ def unzip_corpus(
     # Build (or connect) DB
     tb.crate_to_db(str(extract_to), str(database))
     return database, extract_to
+

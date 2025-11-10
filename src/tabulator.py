@@ -1,9 +1,9 @@
 from rocrate_tabular.tabulator import ROCrateTabulator
 from src.utils import unzip_corpus
-from collections import defaultdict
-import json
-import pandas as pd 
 import sqlite3
+import pandas as pd
+import json
+from collections import defaultdict
 
 # main idea
 '''
@@ -48,7 +48,7 @@ class LDaCATabulator:
         self.url = url
         self.tb = ROCrateTabulator()
         self.database, self.extract_to = unzip_corpus(self.url, tb=self.tb)
-
+    
     def build_table(self, verbose: bool = True):  # this could be function for Alex app
         # prepare tables
         self.tb.infer_config()
@@ -139,18 +139,30 @@ class LDaCATabulator:
 
         return clean_data
 
+        
+
 
     ############################### specific data user may need can use these functions
-    def get_text():
-        pass
-
+    def get_text(self, include_metadata = True):
+        if include_metadata:
+            self.build_table(self.tb)
+        else:
+            table = "RepositoryObject"
+            self.tb.entity_table(table, "ldac:indexableText")
+            
+    
+    # Michael comment on issue #78: first of LDaCA tanulator should return it as text 
     def get_csv():
         pass
     
 
-    # xml files are not that common
+    # PT comment on issue #78: we do not deal with XML yet
     def get_xml(): 
         pass
 
     def get_people():
         pass
+
+    def get_organization():
+        pass
+
