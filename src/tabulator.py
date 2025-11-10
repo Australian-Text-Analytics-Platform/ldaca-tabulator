@@ -171,12 +171,17 @@ class LDaCATabulator:
     def get_people(self):
         table = "Person"
 
+        if table not in self.tb.infer_config():
+            print(f"No '{table}' table found in the corpus.")
+            return None
+
+        self.tb.infer_config[table]
         self.tb.infer_config()
         self.tb.use_tables([table])
 
         with sqlite3.connect(self.database) as conn:
             df = pd.read_sql(
-                f'SELECT * FROM {table}', conn
+            f'SELECT * FROM {table}', conn
             )
         
         with open("./config/config.json") as f:
@@ -185,11 +190,9 @@ class LDaCATabulator:
         repo_props = [
             p for p in config['tables']['Person'].get('properties', [])
             if p in df.columns
-        ]
+            ]
 
         df = df[repo_props]
-        
-        return df
 
-    def get_organization():
+    def get_organization(self):
         pass
