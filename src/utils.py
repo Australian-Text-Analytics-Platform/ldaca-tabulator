@@ -5,6 +5,9 @@ import requests
 from io import BytesIO
 from rocrate_tabular.tabulator import ROCrateTabulator
 import json
+import sqlite3
+import pandas as pd
+from typing import List
 
 
 def unzip_corpus(
@@ -51,4 +54,20 @@ def load_config(config_path: str):
         config = json.load(f)
     return config
 
+
+# loading table from database
+def load_table_from_db(
+    database_path: str,
+    table_name: str,
+    columns: List[str] | None = None
+):
+ 
+    with sqlite3.connect(database_path) as conn:
+        if columns:
+            cols = ", ".join(f'"{c}"' for c in columns)
+        else:
+            cols = "*"
+
+        query = f"SELECT {cols} FROM {table_name}"
+        return pd.read_sql(query, conn)
 

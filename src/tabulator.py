@@ -1,11 +1,10 @@
 from rocrate_tabular.tabulator import ROCrateTabulator
 from src.utils import (
     unzip_corpus,
-    load_config
+    load_config,
+    load_table_from_db
     )
-import sqlite3
 import pandas as pd
-import json
 from collections import defaultdict
 
 # main idea
@@ -109,9 +108,9 @@ class LDaCATabulator:
         self.tb.entity_table(table, "ldac:indexableText")
 
         # Read data from DB
-        with sqlite3.connect(self.database) as conn:
-            df = pd.read_sql(f"SELECT * FROM {table}", conn)
+        df = load_table_from_db(self.database, table)
 
+        # Load config file
         config = load_config("./config/config.json")
 
         result = [(key, v) for key, val in prop_types.items() for v in val]
@@ -150,10 +149,9 @@ class LDaCATabulator:
         self.tb.use_tables([table])
         self.tb.entity_table(table, "ldac:indexableText")
 
-        with sqlite3.connect(self.database) as conn:
-            df = pd.read_sql(
-                f'SELECT "ldac:mainText", "ldac:indexableText" AS text FROM {table}', conn
-            )
+        # Read data from DB
+        df = load_table_from_db(self.database, table, columns=["ldac:mainText", "ldac:indexableText"])
+
         return df
             
     
@@ -176,10 +174,8 @@ class LDaCATabulator:
         self.tb.infer_config()
         self.tb.use_tables([table])
 
-        with sqlite3.connect(self.database) as conn:
-            df = pd.read_sql(
-            f'SELECT * FROM {table}', conn
-            )
+        # Read data from DB
+        df = load_table_from_db(self.database, table)
         
         config = load_config("./config/config.json")
         
@@ -201,10 +197,8 @@ class LDaCATabulator:
         self.tb.infer_config()
         self.tb.use_tables([table])
 
-        with sqlite3.connect(self.database) as conn:
-            df = pd.read_sql(
-            f'SELECT * FROM {table}', conn
-            )
+        # Read data from DB
+        df = load_table_from_db(self.database, table)
         
         config = load_config("./config/config.json")
         
