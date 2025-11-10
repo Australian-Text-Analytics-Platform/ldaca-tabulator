@@ -1,8 +1,9 @@
 from rocrate_tabular.tabulator import ROCrateTabulator
-from src.utils import (
+from .utils import (
     unzip_corpus,
     load_config,
-    load_table_from_db
+    load_table_from_db,
+    safe_table_action
     )
 import pandas as pd
 from collections import defaultdict
@@ -57,11 +58,14 @@ class LDaCATabulator:
         target_types = list(self.tb.config["potential_tables"])
 
         # TODO bug in rocrate-tabulator 
+        # Quick fix: remove property that causes issues
+
         if "Language" in target_types:
             target_types.remove("Language")
 
         table = "RepositoryObject"
-        self.tb.use_tables(target_types)
+        #self.tb.use_tables(target_types)
+        safe_table_action(self.tb, "use", target_types)
 
         config = self.tb.config["tables"][table]
         if not config.get("all_props"):
@@ -105,7 +109,8 @@ class LDaCATabulator:
         # Expand and rebuild table
         self.tb.expand_properties(table, candidates)
         # Adding text to the table
-        self.tb.entity_table(table, "ldac:indexableText")
+        #self.tb.entity_table(table, "ldac:indexableText")
+        safe_table_action(self.tb, "entity", table, "ldac:indexableText")
 
         # Read data from DB
         df = load_table_from_db(self.database, table)

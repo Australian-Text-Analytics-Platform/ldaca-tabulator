@@ -48,7 +48,6 @@ def unzip_corpus(
 
 
 # loading config file
-
 def load_config(config_path: str):
     with open(config_path) as f:
         config = json.load(f)
@@ -70,4 +69,32 @@ def load_table_from_db(
 
         query = f"SELECT {cols} FROM {table_name}"
         return pd.read_sql(query, conn)
+    
+
+def auto_ignore_bad_props(tb, action, *args):
+    try:
+        if action == "use":
+            tb.use_tables(*args)
+        elif action == "entity":
+            tb.entity_table(*args)
+        else:
+            raise ValueError("Invalid action type. Use 'use' or 'entity'.")
+    except Exception as e:
+        msg = str(e)
+        if "Too many columns" in msg:
+            table = args[0] if args else "UnknownTable"
+            prop = msg.split("for")[-1].strip()
+            print(f"{table}: too many values for '{prop}', ignoring it.")
+            conf = tb.config["tables"].get(table, {})
+            ignore = conf.get("ignore_props", [])
+            if prop not in ignore:
+                ignore.append(prop)
+            tb.config["tables"][table]["ignore_props"] = ignore
+            tb.entity_table(*args)
+        elif "already generated" in msg:
+            print(f"ℹTable already generated, skipping: {args}")
+        elif "not recognised" in msg:
+            print(f"Skipping unrecognised table: {args}")
+        else:
+            raise
 
