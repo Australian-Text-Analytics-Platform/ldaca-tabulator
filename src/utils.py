@@ -4,6 +4,8 @@ import zipfile
 import requests
 from io import BytesIO
 from rocrate_tabular.tabulator import ROCrateTabulator
+import json
+
 
 def unzip_corpus(
     zip_url: str,
@@ -40,4 +42,13 @@ def unzip_corpus(
     # Build (or connect) DB
     tb.crate_to_db(str(extract_to), str(database))
     return database, extract_to
+
+
+# loading config file
+
+def load_config(config_path: str):
+    with open(config_path) as f:
+        config = json.load(f)
+    return config
+
 

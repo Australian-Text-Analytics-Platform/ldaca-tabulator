@@ -1,5 +1,8 @@
 from rocrate_tabular.tabulator import ROCrateTabulator
-from src.utils import unzip_corpus
+from src.utils import (
+    unzip_corpus,
+    load_config
+    )
 import sqlite3
 import pandas as pd
 import json
@@ -49,7 +52,7 @@ class LDaCATabulator:
         self.tb = ROCrateTabulator()
         self.database, self.extract_to = unzip_corpus(self.url, tb=self.tb)
     
-    def build_table(self, verbose: bool = True):  # this could be function for Alex app
+    def build_table(self, verbose: bool = True): 
         # prepare tables
         self.tb.infer_config()
         target_types = list(self.tb.config["potential_tables"])
@@ -109,8 +112,7 @@ class LDaCATabulator:
         with sqlite3.connect(self.database) as conn:
             df = pd.read_sql(f"SELECT * FROM {table}", conn)
 
-        with open("./config/config.json") as f:
-            config = json.load(f)
+        config = load_config("./config/config.json")
 
         result = [(key, v) for key, val in prop_types.items() for v in val]
         combined_props = []
@@ -139,11 +141,7 @@ class LDaCATabulator:
 
         return clean_data
 
-        
-
-
-    ############################### specific data user may need can use these functions
-    def get_text(self, include_metadata: bool = True):
+    def get_text(self, include_metadata: bool = True): # This method can also be used for Alex app
         table = "RepositoryObject"
         if include_metadata:
             return self.build_table()
@@ -159,7 +157,7 @@ class LDaCATabulator:
         return df
             
     
-    # Michael comment on issue #78: first of LDaCA tanulator should return it as text 
+    # Michael comment on issue #78: first of LDaCA tabulator should return it as text 
     def get_csv():
         pass
     
@@ -183,8 +181,7 @@ class LDaCATabulator:
             f'SELECT * FROM {table}', conn
             )
         
-        with open("./config/config.json") as f:
-            config = json.load(f)
+        config = load_config("./config/config.json")
         
         repo_props = [
             p for p in config['tables']['Person'].get('properties', [])
@@ -209,8 +206,7 @@ class LDaCATabulator:
             f'SELECT * FROM {table}', conn
             )
         
-        with open("./config/config.json") as f:
-            config = json.load(f)
+        config = load_config("./config/config.json")
         
         repo_props = [
             p for p in config['tables']['Organization'].get('properties', [])
