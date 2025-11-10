@@ -175,7 +175,6 @@ class LDaCATabulator:
             print(f"No '{table}' table found in the corpus.")
             return None
 
-        self.tb.infer_config[table]
         self.tb.infer_config()
         self.tb.use_tables([table])
 
@@ -193,6 +192,30 @@ class LDaCATabulator:
             ]
 
         df = df[repo_props]
+        return df
 
     def get_organization(self):
-        pass
+        table = "Organization"
+
+        if table not in self.tb.infer_config():
+            print(f"No '{table}' table found in the corpus.")
+            return None
+        
+        self.tb.infer_config()
+        self.tb.use_tables([table])
+
+        with sqlite3.connect(self.database) as conn:
+            df = pd.read_sql(
+            f'SELECT * FROM {table}', conn
+            )
+        
+        with open("./config/config.json") as f:
+            config = json.load(f)
+        
+        repo_props = [
+            p for p in config['tables']['Organization'].get('properties', [])
+            if p in df.columns
+            ]
+
+        df = df[repo_props]
+        return df
