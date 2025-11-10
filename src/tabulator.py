@@ -178,6 +178,17 @@ class LDaCATabulator:
             df = pd.read_sql(
                 f'SELECT * FROM {table}', conn
             )
+        
+        with open("./config/config.json") as f:
+            config = json.load(f)
+        
+        repo_props = [
+            p for p in config['tables']['Person'].get('properties', [])
+            if p in df.columns
+        ]
+
+        df = df[repo_props]
+        
         return df
 
     def get_organization():
