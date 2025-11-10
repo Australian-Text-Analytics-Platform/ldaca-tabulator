@@ -143,12 +143,20 @@ class LDaCATabulator:
 
 
     ############################### specific data user may need can use these functions
-    def get_text(self, include_metadata = True):
+    def get_text(self, include_metadata: bool = True):
+        table = "RepositoryObject"
         if include_metadata:
-            self.build_table(self.tb)
-        else:
-            table = "RepositoryObject"
-            self.tb.entity_table(table, "ldac:indexableText")
+            return self.build_table()
+
+        self.tb.infer_config()
+        self.tb.use_tables([table])
+        self.tb.entity_table(table, "ldac:indexableText")
+
+        with sqlite3.connect(self.database) as conn:
+            df = pd.read_sql(
+                f'SELECT "ldac:mainText", "ldac:indexableText" AS text FROM {table}', conn
+            )
+        return df
             
     
     # Michael comment on issue #78: first of LDaCA tanulator should return it as text 
@@ -160,9 +168,17 @@ class LDaCATabulator:
     def get_xml(): 
         pass
 
-    def get_people():
-        pass
+    def get_people(self):
+        table = "Person"
+
+        self.tb.infer_config()
+        self.tb.use_tables([table])
+
+        with sqlite3.connect(self.database) as conn:
+            df = pd.read_sql(
+                f'SELECT * FROM {table}', conn
+            )
+        return df
 
     def get_organization():
         pass
-
