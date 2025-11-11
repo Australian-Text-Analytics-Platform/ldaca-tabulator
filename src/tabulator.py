@@ -3,7 +3,7 @@ from .utils import (
     unzip_corpus,
     load_config,
     load_table_from_db,
-    safe_table_action
+    auto_ignore_bad_props
     )
 import pandas as pd
 from collections import defaultdict
@@ -65,7 +65,7 @@ class LDaCATabulator:
 
         table = "RepositoryObject"
         #self.tb.use_tables(target_types)
-        safe_table_action(self.tb, "use", target_types)
+        auto_ignore_bad_props(self.tb, "use", target_types)
 
         config = self.tb.config["tables"][table]
         if not config.get("all_props"):
@@ -110,7 +110,7 @@ class LDaCATabulator:
         self.tb.expand_properties(table, candidates)
         # Adding text to the table
         #self.tb.entity_table(table, "ldac:indexableText")
-        safe_table_action(self.tb, "entity", table, "ldac:indexableText")
+        auto_ignore_bad_props(self.tb, "entity", table, "ldac:indexableText")
 
         # Read data from DB
         df = load_table_from_db(self.database, table)

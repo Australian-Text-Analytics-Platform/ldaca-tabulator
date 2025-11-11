@@ -8,6 +8,7 @@ import json
 import sqlite3
 import pandas as pd
 from typing import List
+import re
 
 
 def unzip_corpus(
@@ -71,30 +72,34 @@ def load_table_from_db(
         return pd.read_sql(query, conn)
     
 
-def auto_ignore_bad_props(tb, action, *args):
-    try:
-        if action == "use":
-            tb.use_tables(*args)
-        elif action == "entity":
-            tb.entity_table(*args)
-        else:
-            raise ValueError("Invalid action type. Use 'use' or 'entity'.")
-    except Exception as e:
-        msg = str(e)
-        if "Too many columns" in msg:
-            table = args[0] if args else "UnknownTable"
-            prop = msg.split("for")[-1].strip()
-            print(f"{table}: too many values for '{prop}', ignoring it.")
-            conf = tb.config["tables"].get(table, {})
-            ignore = conf.get("ignore_props", [])
-            if prop not in ignore:
-                ignore.append(prop)
-            tb.config["tables"][table]["ignore_props"] = ignore
-            tb.entity_table(*args)
-        elif "already generated" in msg:
-            print(f"ℹTable already generated, skipping: {args}")
-        elif "not recognised" in msg:
-            print(f"Skipping unrecognised table: {args}")
-        else:
-            raise
 
+# This function is temporarily added to handle errors when using or entity_table or use_tables 
+def auto_ignore_bad_props(tb, action, *args):
+    while True:
+        try:
+            if action == "use":
+                tb.use_tables(*args)
+            elif action == "entity":
+                tb.entity_table(*args)
+            else:
+                raise ValueError("Invalid action type. Use 'use' or 'entity'.")
+            break
+        except Exception as e:
+            msg = str(e)
+            if "Too many columns" in msg:
+                table = args[0] if args else "UnknownTable"
+                raw_prop = msg.split("for", 1)[-1].strip()
+                prop = re.sub(r"_\d+$", "", raw_prop)
+                print(f"{table}: too many values for '{prop}', ignoring it.")
+                conf = tb.config["tables"].setdefault(table, {})
+                ignore = conf.setdefault("ignore_props", [])
+                if prop not in ignore:
+                    ignore.append(prop)
+                continue
+            if "already generated" in msg:
+                print(f"Table already generated, skipping: {args}")
+                break
+            if "not recognised" in msg:
+                print(f"Skipping unrecognised table: {args}")
+                break
+            raise
