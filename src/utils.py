@@ -73,7 +73,7 @@ def load_table_from_db(
     
 
 
-# This function is temporarily added to handle errors when using or entity_table or use_tables 
+# FIXME this function is temporarily added to handle errors when using or entity_table or use_tables 
 def auto_ignore_bad_props(tb, action, *args):
     while True:
         try:

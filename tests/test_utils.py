@@ -1,0 +1,1 @@
+from src.utils import load_table_from_db
