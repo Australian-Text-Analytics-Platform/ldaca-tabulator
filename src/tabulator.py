@@ -60,8 +60,8 @@ class LDaCATabulator:
         # TODO bug in rocrate-tabulator 
         # Quick fix: remove property that causes issues
 
-        if "Language" in target_types:
-            target_types.remove("Language")
+        #if "Language" in target_types:
+        #    target_types.remove("Language")
 
         table = "RepositoryObject"
         #self.tb.use_tables(target_types)
