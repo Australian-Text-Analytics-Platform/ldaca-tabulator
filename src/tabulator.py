@@ -1,5 +1,12 @@
-
-# import packages
+from rocrate_tabular.tabulator import ROCrateTabulator
+from .utils import (
+    unzip_corpus,
+    load_config,
+    load_table_from_db,
+    auto_ignore_bad_props
+    )
+import pandas as pd
+from collections import defaultdict
 
 # main idea
 '''
@@ -40,4 +47,170 @@ print(df2.head)
 '''
 
 class LDaCATabulator:
-    pass
+    def __init__(self, url):
+        self.url = url
+        self.tb = ROCrateTabulator()
+        self.database, self.extract_to = unzip_corpus(self.url, tb=self.tb)
+    
+    def build_table(self, verbose: bool = True): 
+        # prepare tables
+        self.tb.infer_config()
+        target_types = list(self.tb.config["potential_tables"])
+
+        # TODO bug in rocrate-tabulator 
+        # Quick fix: remove property that causes issues
+
+        if "Language" in target_types:
+            target_types.remove("Language")
+
+        table = "RepositoryObject"
+        #self.tb.use_tables(target_types)
+        auto_ignore_bad_props(self.tb, "use", target_types)
+
+        config = self.tb.config["tables"][table]
+        if not config.get("all_props"):
+            self.tb.entity_table(table)
+
+        ids = self.tb.fetch_ids(table)
+
+        prop_types = defaultdict(set)
+
+        # Scan each entity’s properties
+        for entity_id in ids:
+            for prop in self.tb.fetch_properties(entity_id):
+                tgt = prop.get("target_id")
+                if not tgt:
+                    continue
+                # Get all @type values for the target
+                types = {
+                    p["value"]
+                    for p in self.tb.fetch_properties(tgt)
+                    if p["property_label"] == "@type"
+                }
+                if types:
+                    prop_types[prop["property_label"]].update(types)
+
+        # Filter to properties whose target types intersect the desired list
+        candidates = [
+            prop
+            for prop, types in prop_types.items()
+            if types & set(target_types)
+            and prop in config.get("all_props", [])
+        ]
+
+        if not candidates:
+            if verbose:
+                print("No expandable properties matched those target types.")
+            return prop_types
+
+        if verbose:
+            print(f"Expanding {len(candidates)} properties:", candidates)
+
+        # Expand and rebuild table
+        self.tb.expand_properties(table, candidates)
+        # Adding text to the table
+        #self.tb.entity_table(table, "ldac:indexableText")
+        auto_ignore_bad_props(self.tb, "entity", table, "ldac:indexableText")
+
+        # Read data from DB
+        df = load_table_from_db(self.database, table)
+
+        # Load config file
+        config = load_config("./config/config.json")
+
+        result = [(key, v) for key, val in prop_types.items() for v in val]
+        combined_props = []
+
+        for prop_name, target_type in result:
+            # Only proceed if target_type exists in config["tables"]
+            if target_type in config["tables"]:
+                subprops = config["tables"][target_type]["properties"]
+                for subprop in subprops:
+                    combined_props.append(f"{prop_name}_{subprop}")
+
+        # TODO: Why are some columns in df and combined_props not matching?
+        # Get only those RepositoryObject properties that exist in df
+        repo_props = [
+            p for p in config['tables']['RepositoryObject']['properties']
+            if p in df.columns
+        ]
+
+        valid_combined_props = list(set(combined_props) & set(df.columns))
+
+        # Concatenate
+        clean_data = pd.concat(
+            [df[repo_props], df[valid_combined_props]],
+            axis=1
+        )
+
+        return clean_data
+
+    def get_text(self, include_metadata: bool = True): # This method can also be used for Alex app
+        table = "RepositoryObject"
+        if include_metadata:
+            return self.build_table()
+
+        self.tb.infer_config()
+        self.tb.use_tables([table])
+        self.tb.entity_table(table, "ldac:indexableText")
+
+        # Read data from DB
+        df = load_table_from_db(self.database, table, columns=["ldac:mainText", "ldac:indexableText"])
+
+        return df
+            
+    
+    # Michael comment on issue #78: first of LDaCA tabulator should return it as text 
+    def get_csv():
+        pass
+    
+
+    # PT comment on issue #78: we do not deal with XML yet
+    def get_xml(): 
+        pass
+
+    def get_people(self):
+        table = "Person"
+
+        if table not in self.tb.infer_config():
+            print(f"No '{table}' table found in the corpus.")
+            return None
+
+        self.tb.infer_config()
+        self.tb.use_tables([table])
+
+        # Read data from DB
+        df = load_table_from_db(self.database, table)
+        
+        config = load_config("./config/config.json")
+        
+        repo_props = [
+            p for p in config['tables']['Person'].get('properties', [])
+            if p in df.columns
+            ]
+
+        df = df[repo_props]
+        return df
+
+    def get_organization(self):
+        table = "Organization"
+
+        if table not in self.tb.infer_config():
+            print(f"No '{table}' table found in the corpus.")
+            return None
+        
+        self.tb.infer_config()
+        self.tb.use_tables([table])
+
+        # Read data from DB
+        df = load_table_from_db(self.database, table)
+        
+        config = load_config("./config/config.json")
+        
+        repo_props = [
+            p for p in config['tables']['Organization'].get('properties', [])
+            if p in df.columns
+            ]
+
+        df = df[repo_props]
+        return df
