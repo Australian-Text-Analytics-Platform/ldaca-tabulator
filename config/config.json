@@ -1,4 +1,21 @@
 {
+    "tables": {
+        "RepositoryObject": {
+            "all_props": [],
+            "expand_props": [ "author" ],
+            "ignore_props": [ "@type", "conformsTo" ],
+        },
+        "Person": {
+            "all_props": [],
+            "ignore_props": [ "@type", "conformsTo" ],
+        },
+    },
+}
+
+
+
+
+{
   "tables": {
     "Person": {
       "properties": [
