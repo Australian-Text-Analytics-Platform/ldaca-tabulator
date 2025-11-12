@@ -74,38 +74,32 @@ def load_table_from_db(
 
 
 # FIXME this function is temporarily added to handle errors when using or entity_table or use_tables 
-def auto_ignore_bad_props(tb, func, *args, **kwargs):
-    """
-    General wrapper for ROCrateTabulator calls.
-    Catches 'Too many columns' and retries after ignoring
-    the offending property. Works for both single or multiple tables.
-    """
-    # If first arg is a list of tables, loop one by one
-    if args and isinstance(args[0], list):
-        for table in args[0]:
-            # Call the tabulator function directly for each table
-            auto_ignore_bad_props(tb, func, table, **kwargs)
-        return
-
+def auto_ignore_bad_props(tb, action, *args):
     while True:
         try:
-            return func(*args, **kwargs)
+            if action == "use":
+                tb.use_tables(*args)
+            elif action == "entity":
+                tb.entity_table(*args)
+            else:
+                raise ValueError("Invalid action type. Use 'use' or 'entity'.")
+            break
         except Exception as e:
             msg = str(e)
             if "Too many columns" in msg:
-                raw_prop = msg.split("for", 1)[-1].strip()
-                prop = re.sub(r"[_\d\W]+$", "", raw_prop)
                 table = args[0] if args else "UnknownTable"
-                print(f"⚠️  {table}: too many values for '{prop}', ignoring it.")
+                raw_prop = msg.split("for", 1)[-1].strip()
+                prop = re.sub(r"_\d+$", "", raw_prop)
+                print(f"{table}: too many values for '{prop}', ignoring it.")
                 conf = tb.config["tables"].setdefault(table, {})
                 ignore = conf.setdefault("ignore_props", [])
                 if prop not in ignore:
                     ignore.append(prop)
-                    print(f"⏩  Retrying '{table}' without '{prop}'...")
-                    continue
-            elif "already generated" in msg or "not recognised" in msg:
-                print(f"ℹ️  Skipping: {msg}")
-                return None
-            else:
-                raise
-
+                continue
+            if "already generated" in msg:
+                print(f"Table already generated, skipping: {args}")
+                break
+            if "not recognised" in msg:
+                print(f"Skipping unrecognised table: {args}")
+                break
+            raise
