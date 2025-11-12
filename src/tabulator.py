@@ -64,8 +64,8 @@ class LDaCATabulator:
         #    target_types.remove("Language")
 
         table = "RepositoryObject"
-        #self.tb.use_tables(target_types)
-        auto_ignore_bad_props(self.tb, "use", target_types)
+        self.tb.use_tables(target_types)
+        #auto_ignore_bad_props(self.tb, "use", target_types)
 
         config = self.tb.config["tables"][table]
         if not config.get("all_props"):
@@ -109,8 +109,8 @@ class LDaCATabulator:
         # Expand and rebuild table
         self.tb.expand_properties(table, candidates)
         # Adding text to the table
-        #self.tb.entity_table(table, "ldac:indexableText")
-        auto_ignore_bad_props(self.tb, "entity", table, "ldac:indexableText")
+        self.tb.entity_table(table, "ldac:indexableText")
+        #auto_ignore_bad_props(self.tb, "entity", table, "ldac:indexableText")
 
         # Read data from DB
         df = load_table_from_db(self.database, table)
