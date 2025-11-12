@@ -15,4 +15,4 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-rocrate-tabular = { git = "https://github.com/Sydney-Informatics-Hub/rocrate-tabular.git" }
+rocrate-tabular = { git = "https://github.com/Atiq0452/rocrate-tabular.git" }
