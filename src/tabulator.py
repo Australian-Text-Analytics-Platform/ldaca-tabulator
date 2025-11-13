@@ -51,99 +51,46 @@ class LDaCATabulator:
         self.url = url
         self.tb = ROCrateTabulator()
         self.database, self.extract_to = unzip_corpus(self.url, tb=self.tb)
-    
-    def build_table(self, verbose: bool = True): 
-        # prepare tables
-        self.tb.infer_config()
-        target_types = list(self.tb.config["potential_tables"])
 
-        # TODO bug in rocrate-tabulator 
-        # Quick fix: remove property that causes issues
+    def build_table(self, verbose: bool = True):
+        """
+        Clean version of build_table() following the official Tabulator usage.
+        - Load config
+        - Build crate DB
+        - Build all tables declared in config
+        - Return RepositoryObject as a DataFrame
+        """
 
-        if "Language" in target_types:
-            target_types.remove("Language")
-
-        table = "RepositoryObject"
-        self.tb.use_tables(target_types)
-        #auto_ignore_bad_props(self.tb, "use", target_types)
-
-        config = self.tb.config["tables"][table]
-        if not config.get("all_props"):
-            self.tb.entity_table(table)
-
-        ids = self.tb.fetch_ids(table)
-
-        prop_types = defaultdict(set)
-
-        # Scan each entity’s properties
-        for entity_id in ids:
-            for prop in self.tb.fetch_properties(entity_id):
-                tgt = prop.get("target_id")
-                if not tgt:
-                    continue
-                # Get all @type values for the target
-                types = {
-                    p["value"]
-                    for p in self.tb.fetch_properties(tgt)
-                    if p["property_label"] == "@type"
-                }
-                if types:
-                    prop_types[prop["property_label"]].update(types)
-
-        # Filter to properties whose target types intersect the desired list
-        candidates = [
-            prop
-            for prop, types in prop_types.items()
-            if types & set(target_types)
-            and prop in config.get("all_props", [])
-        ]
-
-        if not candidates:
-            if verbose:
-                print("No expandable properties matched those target types.")
-            return prop_types
-
+        # 1️⃣ Load config
         if verbose:
-            print(f"Expanding {len(candidates)} properties:", candidates)
+            print("Loading LDaCA config...")
+        self.tb.config = load_config("./config/cooee-config.json")
 
-        # Expand and rebuild table
-        self.tb.expand_properties(table, candidates)
-        # Adding text to the table
-        self.tb.entity_table(table, "ldac:indexableText")
-        #auto_ignore_bad_props(self.tb, "entity", table, "ldac:indexableText")
+        # 2️⃣ Build full DB from crate
+        if verbose:
+            print("Building crate into SQLite database...")
+        self.tb.crate_to_db(self.extract_to, self.database)
 
-        # Read data from DB
-        df = load_table_from_db(self.database, table)
+        # 3️⃣ Build tables listed in config
+        tables = self.tb.config["tables"].keys()
 
-        # Load config file
-        config = load_config("./config/config.json")
+        for table in tables:
+            try:
+                if verbose:
+                    print(f"Building table '{table}'...")
+                self.tb.entity_table(table)
+            except Exception as e:
+                # Some tables won’t exist in some corpora — skip safely
+                if verbose:
+                    print(f"⚠️ Skipping table '{table}': {e}")
 
-        result = [(key, v) for key, val in prop_types.items() for v in val]
-        combined_props = []
+        # 4️⃣ Load RepositoryObject DataFrame
+        if verbose:
+            print("Loading RepositoryObject table...")
 
-        for prop_name, target_type in result:
-            # Only proceed if target_type exists in config["tables"]
-            if target_type in config["tables"]:
-                subprops = config["tables"][target_type]["properties"]
-                for subprop in subprops:
-                    combined_props.append(f"{prop_name}_{subprop}")
+        df = load_table_from_db(self.database, "RepositoryObject")
 
-        # TODO: Why are some columns in df and combined_props not matching?
-        # Get only those RepositoryObject properties that exist in df
-        repo_props = [
-            p for p in config['tables']['RepositoryObject']['properties']
-            if p in df.columns
-        ]
-
-        valid_combined_props = list(set(combined_props) & set(df.columns))
-
-        # Concatenate
-        clean_data = pd.concat(
-            [df[repo_props], df[valid_combined_props]],
-            axis=1
-        )
-
-        return clean_data
+        return df
 
     def get_text(self, include_metadata: bool = True): # This method can also be used for Alex app
         table = "RepositoryObject"
