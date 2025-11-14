@@ -102,3 +102,16 @@ class LDaCATabulator:
             return None
 
         return load_table_from_db(str(self.database), "Organization")
+    
+    def get_speaker(self):
+        """
+        Return Speaker metadata.
+        """
+        try:
+            self.tb.entity_table("Speaker")
+        except Exception:
+            print("No Speaker table in this corpus.")
+            return None
+
+        return load_table_from_db(str(self.database), "Speaker")
+
