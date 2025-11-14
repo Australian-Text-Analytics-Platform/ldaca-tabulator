@@ -1,14 +1,10 @@
 from rocrate_tabular.tabulator import ROCrateTabulator
-from .utils import unzip_corpus, load_config, load_table_from_db
+from .utils import (unzip_corpus,
+                    load_config,
+                    load_table_from_db,
+                    drop_id_columns)
 
 class LDaCATabulator:
-    """
-    A minimal wrapper with exactly 3 methods:
-        - get_text()
-        - get_people()
-        - get_organization()
-    ignore_props and expand_props are handled directly by ROCrateTabulator.
-    """
 
     def __init__(self, url, config_path="./config/cooee-config.json", text_prop="ldac:mainText"):
         self.url = url
@@ -69,6 +65,7 @@ class LDaCATabulator:
         self.tb.entity_table("RepositoryObject")
         df = load_table_from_db(str(self.database), "RepositoryObject")
         df = self._filter_ignored_columns("RepositoryObject", df)
+        df = drop_id_columns(df) 
         return df
 
     # ------------------------------------------------------------
@@ -86,7 +83,8 @@ class LDaCATabulator:
             print("No Person table in this corpus.")
             return None
 
-        return load_table_from_db(str(self.database), "Person")
+        df = load_table_from_db(str(self.database), "Person")
+        return drop_id_columns(df) 
 
     # ------------------------------------------------------------
     # get_organization()
@@ -101,7 +99,8 @@ class LDaCATabulator:
             print("No Organization table in this corpus.")
             return None
 
-        return load_table_from_db(str(self.database), "Organization")
+        df = load_table_from_db(str(self.database), "Organization")
+        return drop_id_columns(df) 
     
     def get_speaker(self):
         """
@@ -113,5 +112,6 @@ class LDaCATabulator:
             print("No Speaker table in this corpus.")
             return None
 
-        return load_table_from_db(str(self.database), "Speaker")
+        df = load_table_from_db(str(self.database), "Speaker")
+        return drop_id_columns(df) 
 
