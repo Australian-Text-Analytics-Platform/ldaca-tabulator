@@ -74,6 +74,8 @@ class LDaCATabulator:
     # ------------------------------------------------------------
     # get_people()
     # ------------------------------------------------------------
+
+    # TODO it does not remove properties of ids
     def get_people(self):
         """
         Return Person table (metadata).
