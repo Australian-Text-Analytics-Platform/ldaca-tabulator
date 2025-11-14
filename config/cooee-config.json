@@ -6,7 +6,6 @@
                 "author",
                 "register",
                 "textType",
-                "locationCreated",
                 "ldac:linguisticGenre",
                 "recipient",
                 "ldac:communicationMode",
@@ -32,11 +31,13 @@
                 "ldac:mainText_id",
                 "hasPart_id",
                 "hasPart_1",
-                "hasPart_id_1"
+                "hasPart_id_1",
+                "hasPart"
             ]
         },
         "Person": {
             "all_props": [],
+            "expand_props": [],
             "ignore_props": [
                 "@type",
                 "conformsTo",
