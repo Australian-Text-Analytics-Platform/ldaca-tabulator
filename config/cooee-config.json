@@ -1,42 +1,47 @@
 {
     "tables": {
         "RepositoryObject": {
-            "all_props": [],
-            "expand_props": [
-                "author",
-                "register",
-                "textType",
-                "locationCreated",
-                "ldac:linguisticGenre",
-                "recipient",
-                "ldac:communicationMode",
-                "ldac:indexableText",
-                "ldac:mainText"
-            ],
-            "ignore_props": [
-                "@type",
-                "conformsTo",
-                "entity_id",
-                "conformsTo_id",
-                "identifier",
-                "author_id",
-                "register_id",
-                "textType_id",
-                "locationCreated_id",
-                "ldac:linguisticGenre_id",
-                "citation_id",
-                "recipient_id",
-                "ldac:communicationMode_id",
-                "inLanguage_id",
-                "ldac:indexableText_id",
-                "ldac:mainText_id",
-                "hasPart_id",
-                "hasPart_1",
-                "hasPart_id_1"
-            ]
-        },
+    "all_props": [],
+    "expand_props": [
+        "author",
+        "register",
+        "textType",
+        "ldac:linguisticGenre",
+        "recipient",
+        "ldac:communicationMode",
+        "ldac:indexableText",
+        "ldac:mainText"
+    ],
+    "ignore_props": [
+        "@type",
+        "conformsTo",
+        "entity_id",
+        "conformsTo_id",
+        "identifier",
+
+        "author_id",
+        "register_id",
+        "textType_id",
+        "locationCreated_id",
+        "ldac:linguisticGenre_id",
+        "citation_id",
+        "recipient_id",
+        "ldac:communicationMode_id",
+        "inLanguage_id",
+        "ldac:indexableText_id",
+        "ldac:mainText_id",
+
+        "hasPart",
+        "hasPart_id",
+        "hasPart_id_1",
+
+        "pcdm:memberOf",
+        "license"
+    ]
+},
         "Person": {
             "all_props": [],
+            "expand_props": [],
             "ignore_props": [
                 "@type",
                 "conformsTo",

@@ -1,216 +1,118 @@
 from rocrate_tabular.tabulator import ROCrateTabulator
-from .utils import (
-    unzip_corpus,
-    load_config,
-    load_table_from_db,
-    auto_ignore_bad_props
-    )
-import pandas as pd
-from collections import defaultdict
-
-# main idea
-'''
-from ldaca.tabulator import LDaCATabulator
-
-CORPUS=""https://data.ldaca.edu.au/api/object/meta?resolve-parts&noUrid&id=arcp%3A%2F%2Fname%2Chdl10.25949~24769173.v1"
-
-tb = new LDaCATabulator(url=CORPUS)
-
-tb.build_tables()
-
-df = tb.get_texts()
-print(df.head)
-
-                              entity_id identifier  ...                    author_prov:specializationOf_id author_description
-0  arcp://name,hdl10.26180~23961609/item/1-001      1-001  ...  arcp://name,hdl10.26180~23961609/author/Philip...               None
-1  arcp://name,hdl10.26180~23961609/item/1-002      1-002  ...  arcp://name,hdl10.26180~23961609/author/Philip...               None
-2  arcp://name,hdl10.26180~23961609/item/1-003      1-003  ...  arcp://name,hdl10.26180~23961609/author/Philip...               None
-3  arcp://name,hdl10.26180~23961609/item/1-004      1-004  ...  arcp://name,hdl10.26180~23961609/author/Philip...               None
-4  arcp://name,hdl10.26180~23961609/item/1-005      1-005  ...  arcp://name,hdl10.26180~23961609/author/Philip...               None
-
-[5 rows x 53 columns]
-
-
-df2 = tb.get_people()
-print(df2.head)
-
-                                           entity_id                                      name  ... homeLocation_id description
-0  https://www.peterlang.com/search?f_0=author&q_...                       Clemens W. A. Fritz  ...            None        None
-1  arcp://name,hdl10.26180~23961609/author/Philip...  Philip, Arthur - status 1788 text #1-001  ...            None        None
-2  arcp://name,hdl10.26180~23961609/author/Philip...                            Philip, Arthur  ...            None        None
-3   arcp://name,hdl10.26180~23961609/recipient/1-001                           1-001 Recipient  ...     #place_GB-E        None
-4  arcp://name,hdl10.26180~23961609/author/Philip...  Philip, Arthur - status 1788 text #1-002  ...            None        None
-
-[5 rows x 22 columns]
-
-
-'''
+from .utils import (unzip_corpus,
+                    load_config,
+                    load_table_from_db,
+                    drop_id_columns)
 
 class LDaCATabulator:
-    def __init__(self, url):
+
+    def __init__(self, url, config_path="./config/cooee-config.json", text_prop="ldac:mainText"):
         self.url = url
         self.tb = ROCrateTabulator()
-        self.database, self.extract_to = unzip_corpus(self.url, tb=self.tb)
-    
-    def build_table(self, verbose: bool = True): 
-        # prepare tables
-        self.tb.infer_config()
-        target_types = list(self.tb.config["potential_tables"])
 
-        # TODO bug in rocrate-tabulator 
-        # Quick fix: remove property that causes issues
+        # Download and unzip
+        self.database, self.extract_to = unzip_corpus(url, tb=self.tb)
 
-        if "Language" in target_types:
-            target_types.remove("Language")
+        # Load LDaCA config 
+        self.tb.config = load_config(config_path)
 
-        table = "RepositoryObject"
-        self.tb.use_tables(target_types)
-        #auto_ignore_bad_props(self.tb, "use", target_types)
+        # What property contains the text file
+        self.tb.text_prop = text_prop
 
-        config = self.tb.config["tables"][table]
-        if not config.get("all_props"):
-            self.tb.entity_table(table)
+    # ------------------------------------------------------------
+    # get_text()
+    # ------------------------------------------------------------
+    def _filter_ignored_columns(self, table_name, df):
+        """
+        Drop columns from df based on ignore_props in the config.
+        Works for any corpus / config.
+        """
+        config = self.tb.config
+        tables_cfg = config.get("tables", {})
+        table_cfg = tables_cfg.get(table_name, {})
 
-        ids = self.tb.fetch_ids(table)
+        cols = list(df.columns)
+        to_drop = set()
 
-        prop_types = defaultdict(set)
+        # Direct ignore_props for this table
+        direct_ignores = table_cfg.get("ignore_props", [])
+        for prop in direct_ignores:
+            for c in cols:
+                if c == prop or c.startswith(f"{prop}_"):
+                    to_drop.add(c)
 
-        # Scan each entity’s properties
-        for entity_id in ids:
-            for prop in self.tb.fetch_properties(entity_id):
-                tgt = prop.get("target_id")
-                if not tgt:
-                    continue
-                # Get all @type values for the target
-                types = {
-                    p["value"]
-                    for p in self.tb.fetch_properties(tgt)
-                    if p["property_label"] == "@type"
-                }
-                if types:
-                    prop_types[prop["property_label"]].update(types)
+        # Expanded properties
+        expand_props = table_cfg.get("expand_props", [])
+        all_ignored_props = set()
+        for t_cfg in tables_cfg.values():
+            for ip in t_cfg.get("ignore_props", []):
+                all_ignored_props.add(ip)
 
-        # Filter to properties whose target types intersect the desired list
-        candidates = [
-            prop
-            for prop, types in prop_types.items()
-            if types & set(target_types)
-            and prop in config.get("all_props", [])
-        ]
+        for exp in expand_props:
+            for ip in all_ignored_props:
+                prefix = f"{exp}_{ip}"
+                for c in cols:
+                    if c == prefix or c.startswith(prefix + "_"):
+                        to_drop.add(c)
 
-        if not candidates:
-            if verbose:
-                print("No expandable properties matched those target types.")
-            return prop_types
-
-        if verbose:
-            print(f"Expanding {len(candidates)} properties:", candidates)
-
-        # Expand and rebuild table
-        self.tb.expand_properties(table, candidates)
-        # Adding text to the table
-        self.tb.entity_table(table, "ldac:indexableText")
-        #auto_ignore_bad_props(self.tb, "entity", table, "ldac:indexableText")
-
-        # Read data from DB
-        df = load_table_from_db(self.database, table)
-
-        # Load config file
-        config = load_config("./config/config.json")
-
-        result = [(key, v) for key, val in prop_types.items() for v in val]
-        combined_props = []
-
-        for prop_name, target_type in result:
-            # Only proceed if target_type exists in config["tables"]
-            if target_type in config["tables"]:
-                subprops = config["tables"][target_type]["properties"]
-                for subprop in subprops:
-                    combined_props.append(f"{prop_name}_{subprop}")
-
-        # TODO: Why are some columns in df and combined_props not matching?
-        # Get only those RepositoryObject properties that exist in df
-        repo_props = [
-            p for p in config['tables']['RepositoryObject']['properties']
-            if p in df.columns
-        ]
-
-        valid_combined_props = list(set(combined_props) & set(df.columns))
-
-        # Concatenate
-        clean_data = pd.concat(
-            [df[repo_props], df[valid_combined_props]],
-            axis=1
-        )
-
-        return clean_data
-
-    def get_text(self, include_metadata: bool = True): # This method can also be used for Alex app
-        table = "RepositoryObject"
-        if include_metadata:
-            return self.build_table()
-
-        self.tb.infer_config()
-        self.tb.use_tables([table])
-        self.tb.entity_table(table, "ldac:indexableText")
-
-        # Read data from DB
-        df = load_table_from_db(self.database, table, columns=["ldac:mainText", "ldac:indexableText"])
+        if to_drop:
+            df = df.drop(columns=[c for c in to_drop if c in df.columns])
 
         return df
-            
-    
-    # Michael comment on issue #78: first of LDaCA tabulator should return it as text 
-    def get_csv():
-        pass
-    
 
-    # PT comment on issue #78: we do not deal with XML yet
-    def get_xml(): 
-        pass
+    # get_text: RepositoryObject
+    def get_text(self):
+        #TODO some properties mat not be expandable for some corpora
+        self.tb.entity_table("RepositoryObject")
+        df = load_table_from_db(str(self.database), "RepositoryObject")
+        df = self._filter_ignored_columns("RepositoryObject", df)
+        df = drop_id_columns(df) 
+        return df
 
+    # ------------------------------------------------------------
+    # get_people()
+    # ------------------------------------------------------------
+
+    # TODO it does not remove properties of ids
     def get_people(self):
-        table = "Person"
-
-        if table not in self.tb.infer_config():
-            print(f"No '{table}' table found in the corpus.")
+        """
+        Return Person table (metadata).
+        """
+        try:
+            self.tb.entity_table("Person")
+        except Exception:
+            print("No Person table in this corpus.")
             return None
 
-        self.tb.infer_config()
-        self.tb.use_tables([table])
+        df = load_table_from_db(str(self.database), "Person")
+        return drop_id_columns(df) 
 
-        # Read data from DB
-        df = load_table_from_db(self.database, table)
-        
-        config = load_config("./config/config.json")
-        
-        repo_props = [
-            p for p in config['tables']['Person'].get('properties', [])
-            if p in df.columns
-            ]
-
-        df = df[repo_props]
-        return df
-
+    # ------------------------------------------------------------
+    # get_organization()
+    # ------------------------------------------------------------
     def get_organization(self):
-        table = "Organization"
-
-        if table not in self.tb.infer_config():
-            print(f"No '{table}' table found in the corpus.")
+        """
+        Return Organization metadata.
+        """
+        try:
+            self.tb.entity_table("Organization")
+        except Exception:
+            print("No Organization table in this corpus.")
             return None
-        
-        self.tb.infer_config()
-        self.tb.use_tables([table])
 
-        # Read data from DB
-        df = load_table_from_db(self.database, table)
-        
-        config = load_config("./config/config.json")
-        
-        repo_props = [
-            p for p in config['tables']['Organization'].get('properties', [])
-            if p in df.columns
-            ]
+        df = load_table_from_db(str(self.database), "Organization")
+        return drop_id_columns(df) 
+    
+    def get_speaker(self):
+        """
+        Return Speaker metadata.
+        """
+        try:
+            self.tb.entity_table("Speaker")
+        except Exception:
+            print("No Speaker table in this corpus.")
+            return None
 
-        df = df[repo_props]
-        return df
+        df = load_table_from_db(str(self.database), "Speaker")
+        return drop_id_columns(df) 
+
