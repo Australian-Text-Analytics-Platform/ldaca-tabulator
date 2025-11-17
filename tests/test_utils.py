@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 from src.utils import (load_config)
 
 
@@ -8,7 +8,3 @@ def test_load_config(path = "./tests/crates/minimal/ro-crate-metadata.json"):
 
 def test_load_table_from_db():
     pass
-
-
-=======
->>>>>>> main
