@@ -23,10 +23,7 @@ class LDaCATabulator:
     # get_text()
     # ------------------------------------------------------------
     def _filter_ignored_columns(self, table_name, df):
-        """
-        Drop columns from df based on ignore_props in the config.
-        Works for any corpus / config.
-        """
+        
         config = self.tb.config
         tables_cfg = config.get("tables", {})
         table_cfg = tables_cfg.get(table_name, {})
@@ -75,9 +72,7 @@ class LDaCATabulator:
 
     # TODO it does not remove properties of ids
     def get_people(self):
-        """
-        Return Person table (metadata).
-        """
+
         try:
             self.tb.entity_table("Person")
         except Exception:
@@ -91,9 +86,7 @@ class LDaCATabulator:
     # get_organization()
     # ------------------------------------------------------------
     def get_organization(self):
-        """
-        Return Organization metadata.
-        """
+
         try:
             self.tb.entity_table("Organization")
         except Exception:
@@ -104,9 +97,7 @@ class LDaCATabulator:
         return drop_id_columns(df) 
     
     def get_speaker(self):
-        """
-        Return Speaker metadata.
-        """
+ 
         try:
             self.tb.entity_table("Speaker")
         except Exception:

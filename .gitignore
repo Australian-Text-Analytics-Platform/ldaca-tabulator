@@ -11,4 +11,9 @@ rocrate.db
 # ignore python cache files
 __pycache__/
 
+# ignore .vscode
+.vscode/
+
+# ignore .pytest_cache
+.pytest_cache/
 
