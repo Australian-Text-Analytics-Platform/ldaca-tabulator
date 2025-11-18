@@ -8,7 +8,6 @@ import json
 import sqlite3
 import pandas as pd
 from typing import List
-import re
 
 
 def unzip_corpus(
