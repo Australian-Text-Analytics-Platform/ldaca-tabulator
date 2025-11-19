@@ -59,7 +59,7 @@ class LDaCATabulator:
 
     # get_text: RepositoryObject
     def get_text(self):
-        #TODO some properties mat not be expandable for some corpora
+        #TODO some properties may not be expandable for some corpora
         self.tb.entity_table("RepositoryObject")
         df = load_table_from_db(str(self.database), "RepositoryObject")
         df = self._filter_ignored_columns("RepositoryObject", df)
