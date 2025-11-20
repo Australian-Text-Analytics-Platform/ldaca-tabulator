@@ -1,6 +1,5 @@
 
 from src.utils import (load_config,
-                       unzip_corpus,
                        load_table_from_db,
                        drop_id_columns)
 import pandas as pd
@@ -57,5 +56,5 @@ def _df_from_json_ids(json_path="./config/config-ids.json"):
 # TODO inculde the drop_id_columns function
 def test_drop_id_columns():
     df = _df_from_json_ids()
-    assert set(df.columns) == {"name", "text"}
+    assert set(drop_id_columns(df).columns) == {"name", "text"}
 
