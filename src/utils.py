@@ -15,7 +15,7 @@ def unzip_corpus(
     tb: ROCrateTabulator,
     folder_name: str | None = None,
     db_name: str | None = None,
-    overwrite: bool = False,
+    overwrite: bool = False, #BUG If already exist. It may give error.
 ):
 
     # Resolve target names/paths
