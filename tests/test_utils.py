@@ -53,7 +53,7 @@ def _df_from_json_ids(json_path="./config/config-ids.json"):
 
     return pd.DataFrame(data)
 
-# TODO inculde the drop_id_columns function
+
 def test_drop_id_columns():
     df = _df_from_json_ids()
     assert set(drop_id_columns(df).columns) == {"name", "text"}
