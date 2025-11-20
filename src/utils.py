@@ -71,7 +71,7 @@ def load_table_from_db(
         return pd.read_sql(query, conn)
     
 
-def drop_id_columns(df: pd.DataFrame, ids_json_path: str = "./config/config-ids.json") -> pd.DataFrame:
+def drop_id_columns(df: pd.DataFrame, ids_json_path: str  = "./config/config-ids.json") -> pd.DataFrame:
     with open(ids_json_path, "r") as f:
         config = json.load(f)
 
