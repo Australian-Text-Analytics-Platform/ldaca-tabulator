@@ -6,7 +6,7 @@ from .utils import (unzip_corpus,
 
 class LDaCATabulator:
 
-    def __init__(self, url, config_path="./config/cooee-config.json", text_prop="ldac:mainText"):
+    def __init__(self, url, config_path="./configs/general/general-config.json", text_prop="ldac:mainText"):
         self.url = url
         self.tb = ROCrateTabulator()
 
