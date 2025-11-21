@@ -41,7 +41,10 @@
 },
         "Person": {
             "all_props": [],
-            "expand_props": [],
+            "expand_props": [
+                "birthPlace",
+                "homeLocation"
+            ],
             "ignore_props": [
                 "@type",
                 "conformsTo",

@@ -1,0 +1,14 @@
+{
+    "tables": {
+        "Place": {
+            "all_props": [],
+            "expand_props": [],
+            "ignore_props": [ 
+                "@type",
+                "conformsTo",
+                "entity_id",
+                "asWKT_1"
+             ]
+        }
+}
+}
