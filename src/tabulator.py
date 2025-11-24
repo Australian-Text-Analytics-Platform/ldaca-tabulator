@@ -47,7 +47,7 @@ class LDaCATabulator:
             for ip in t_cfg.get("ignore_props", []):
                 all_ignored_props.add(ip)
 
-        for exp in expand_props:
+        for exp in expand_props:  
             for ip in all_ignored_props:
                 prefix = f"{exp}_{ip}"
                 for c in cols:
@@ -70,6 +70,7 @@ class LDaCATabulator:
         return drop_id_columns(df)
 
     # get_text: RepositoryObject
+    # TODO This method may need to be made more memory efficient. 
     def get_text(self):
         self.tb.entity_table("RepositoryObject")
 
