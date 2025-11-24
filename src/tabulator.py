@@ -94,9 +94,7 @@ class LDaCATabulator:
         )["name"].tolist()
 
         if speaker_junction not in tables:
-            # Corpus has no speakers table: assign empty list to all rows
-            df["speakers"] = [[] for _ in range(len(df))]
-            return df
+            pass
 
         # Load junction table
         junction = pd.read_sql_query(
