@@ -10,7 +10,9 @@
         "recipient",
         "ldac:communicationMode",
         "ldac:indexableText",
-        "ldac:mainText"
+        "ldac:mainText",
+        "ldac:speaker",
+        "ldac:annotationType"
     ],
     "ignore_props": [
         "@type",

@@ -3,21 +3,12 @@
         "Place": {
             "all_props": [],
             "expand_props": [],
-            "ignore_props": [ 
-                "@type",
-                "conformsTo",
-                "entity_id",
-                "asWKT_1"
-             ]
+            "ignore_props": []
         },
         "Book": {
             "all_props": [],
             "expand_props": [],
-            "ignore_props": [ 
-                "@type",
-                "@type_1",
-                "entity_id"
-             ]
+            "ignore_props": []
         }
 }
 }
