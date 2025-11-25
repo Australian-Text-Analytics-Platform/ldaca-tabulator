@@ -15,7 +15,7 @@ def unzip_corpus(
     tb: ROCrateTabulator,
     folder_name: str | None = None,
     db_name: str | None = None,
-    overwrite: bool = False, # If already exist. It may give error or use the same corpus. Use default True
+    overwrite: bool = False, #HACK If already exist. It may give error or use the same corpus. Use default True
 ):
     """
     Download, extract, and tabulate an RO-Crate corpus into a database.
@@ -89,6 +89,19 @@ def unzip_corpus(
 
 # loading config file
 def load_config(config_path: str):
+    """
+    Load and parse a JSON configuration file.
+
+    Parameters
+    ----------
+    config_path : str
+        Path to the JSON configuration file.
+
+    Returns
+    -------
+    dict
+        Parsed configuration data.
+    """
     with open(config_path) as f:
         config = json.load(f)
     return config
@@ -100,6 +113,24 @@ def load_table_from_db(
     table_name: str,
     columns: List[str] | None = None
 ):
+    """
+    Load a table from a SQLite database into a pandas DataFrame.
+
+    Parameters
+    ----------
+    database_path : str
+        Path to the SQLite database file.
+    table_name : str
+        Name of the table to load from the database.
+    columns : list[str] | None, optional
+        List of column names to select. If None (default), all columns
+        in the table will be selected.
+
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame containing the selected table data.
+    """
  
     with sqlite3.connect(database_path) as conn:
         if columns:
@@ -112,6 +143,27 @@ def load_table_from_db(
     
 
 def drop_id_columns(df: pd.DataFrame, ids_json_path: str  = "./configs/config-ids.json") -> pd.DataFrame:
+    """
+    Drop identifier columns from a DataFrame based on a JSON configuration file.
+
+    This function reads a JSON file containing a list of column names under
+    the key `"ids"` and removes those columns from the given pandas DataFrame.
+    Only columns that actually exist in the DataFrame are removed.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        The input DataFrame from which ID columns should be removed.
+    ids_json_path : str, optional
+        Path to a JSON file containing an `"ids"` key with a list of column
+        names to drop. Defaults to `"./configs/config-ids.json"`.
+
+    Returns
+    -------
+    pandas.DataFrame
+        A new DataFrame with the specified ID columns removed.
+    """
+    # TODO This may need to be fixed as we do not need json file this. Column with name having id at last can be ignored by providing string "id"
     with open(ids_json_path, "r") as f:
         config = json.load(f)
 
