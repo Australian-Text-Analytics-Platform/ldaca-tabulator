@@ -62,7 +62,7 @@ class LDaCATabulator:
         except Exception:
             print(f"No {table_name} table in this corpus.")
             return None
-
+        
         df = load_table_from_db(str(self.database), table_name)
         return drop_id_columns(df)
 
@@ -156,7 +156,7 @@ class LDaCATabulator:
     # ------------------------------------------------------------
     # get_speaker()
     # ------------------------------------------------------------
-    #TODO speaker is loading
+    # TODO remove id variables
     def get_speaker(self):
         return self._load_entity_table("Speaker")
 

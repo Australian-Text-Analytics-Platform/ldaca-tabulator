@@ -101,6 +101,13 @@
                 "isPartOf",
                 "isPartOf_id"
             ]
+        },
+        "Speaker": {
+            "all_props": [],
+            "ignore_props": [
+                "entity_id",
+                "@type"
+            ]
         }
     }
 }
