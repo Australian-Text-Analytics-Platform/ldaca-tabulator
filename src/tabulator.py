@@ -21,9 +21,6 @@ class LDaCATabulator:
         # What property contains the text file
         self.tb.text_prop = text_prop
 
-    # ------------------------------------------------------------
-    # get_text()
-    # ------------------------------------------------------------
     def _filter_ignored_columns(self, table_name, df):
         
         config = self.tb.config
@@ -69,7 +66,9 @@ class LDaCATabulator:
         df = load_table_from_db(str(self.database), table_name)
         return drop_id_columns(df)
 
-    # get_text: RepositoryObject
+    # ------------------------------------------------------------
+    # get_text()
+    # ------------------------------------------------------------
     # TODO This method may need to be made more memory efficient. 
     def get_text(self):
         self.tb.entity_table("RepositoryObject")
@@ -157,6 +156,7 @@ class LDaCATabulator:
     # ------------------------------------------------------------
     # get_speaker()
     # ------------------------------------------------------------
+    #TODO speaker is loading
     def get_speaker(self):
         return self._load_entity_table("Speaker")
 
