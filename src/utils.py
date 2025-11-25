@@ -140,36 +140,36 @@ def load_table_from_db(
 
         query = f"SELECT {cols} FROM {table_name}"
         return pd.read_sql(query, conn)
-    
 
-def drop_id_columns(df: pd.DataFrame, ids_json_path: str  = "./configs/config-ids.json") -> pd.DataFrame:
+def drop_id_columns(df):
     """
-    Drop identifier columns from a DataFrame based on a JSON configuration file.
+    Remove identifier-like columns from a pandas DataFrame.
 
-    This function reads a JSON file containing a list of column names under
-    the key `"ids"` and removes those columns from the given pandas DataFrame.
-    Only columns that actually exist in the DataFrame are removed.
+    This function drops any column whose name contains the substring "_id".
+    It is a general-purpose utility for removing ID or foreign-key columns 
+    that are typically not useful for end-user analysis. 
+    
+    Examples of columns removed:
+        - "author_id"
+        - "conformsTo_id"
+        - "conformsTo_1_id"
+        - "author_id_1"
+        - "ldac:speaker_id"
+
+    The match is substring-based, so any column name containing "_id" 
+    anywhere will be removed. Use with caution if your dataset includes 
+    non-identifier fields that also contain "_id" in their names.
 
     Parameters
     ----------
     df : pandas.DataFrame
-        The input DataFrame from which ID columns should be removed.
-    ids_json_path : str, optional
-        Path to a JSON file containing an `"ids"` key with a list of column
-        names to drop. Defaults to `"./configs/config-ids.json"`.
+        Input DataFrame from which ID-related columns will be removed.
 
     Returns
     -------
     pandas.DataFrame
-        A new DataFrame with the specified ID columns removed.
+        A new DataFrame with all "_id" columns dropped. Columns that do not 
+        exist are ignored safely.
     """
-    # TODO This may need to be fixed as we do not need json file this. Column with name having id at last can be ignored by providing string "id"
-    with open(ids_json_path, "r") as f:
-        config = json.load(f)
-
-    id_cols = config.get("ids", [])
-
-    # Drop only those that exist in the DataFrame
-    cleaned_df = df.drop(columns=[c for c in id_cols if c in df.columns], errors="ignore")
-
-    return cleaned_df
+    cols_to_drop = [c for c in df.columns if "_id" in c]
+    return df.drop(columns=cols_to_drop, errors="ignore")

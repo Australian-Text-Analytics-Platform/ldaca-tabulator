@@ -158,5 +158,6 @@ class LDaCATabulator:
     # ------------------------------------------------------------
     # TODO remove id variables
     def get_speaker(self):
-        return self._load_entity_table("Speaker")
+        df = self._load_entity_table("Speaker")
+        return drop_id_columns(df)
 
