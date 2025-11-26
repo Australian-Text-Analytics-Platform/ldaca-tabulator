@@ -7,6 +7,35 @@ import sqlite3
 import pandas as pd
 
 class LDaCATabulator:
+    """
+    Loader and processor for LDaCA RO-Crate corpora.
+
+    This class wraps around ``ROCrateTabulator`` to provide a simple interface
+    for extracting a corpus, accessing its tables, and applying configuration-
+    based cleaning rules. It aims to make LDaCA corpora easy to inspect and
+    convert into clean, analysis-ready DataFrames with minimal user code.
+
+    Parameters
+    ----------
+    url : str
+        URL of the zipped RO-Crate corpus (arcp:// or http://).
+    config_path : str, optional
+        Path to the LDaCA configuration JSON controlling per-table rules.
+    text_prop : str, optional
+        Property name containing the main text content for RepositoryObjects.
+
+    Attributes
+    ----------
+    url : str
+        The original corpus URL.
+    tb : ROCrateTabulator
+        The underlying tabulator instance used to inspect the crate.
+    database : path-like
+        Path to the extracted SQLite database.
+    extract_to : path-like
+        Directory where the corpus archive was extracted.
+    """
+
 
     def __init__(self, url, config_path="./configs/general/general-config.json", text_prop="ldac:mainText"):
         self.url = url
