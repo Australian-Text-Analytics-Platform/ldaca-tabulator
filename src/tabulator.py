@@ -181,6 +181,15 @@ class LDaCATabulator:
     # get_organization()
     # ------------------------------------------------------------
     def get_organization(self):
+        """
+        Load and return the Organization table from the corpus in a cleaned form.
+
+        Returns
+        -------
+        pandas.DataFrame or None
+        The cleaned Organization table, or ``None`` if the corpus does not
+        contain an Organization entity.
+        """
         return self._load_entity_table("Organization")
     
 
