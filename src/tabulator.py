@@ -51,6 +51,24 @@ class LDaCATabulator:
         self.tb.text_prop = text_prop
     
     def _load_entity_table(self, table_name: str):
+        """
+        Load an entity table from the extracted SQLite database.
+
+        This method checks whether the table exists in the RO-Crate, loads it
+        from the database, and applies standard cleaning by removing internal
+        identifier columns.
+
+        Parameters
+        ----------
+        table_name : str
+            Name of the entity table to load.
+
+        Returns
+        -------
+        pandas.DataFrame or None
+            The loaded and cleaned table, or ``None`` if the table is not
+            present in the corpus.
+        """
         try:
             self.tb.entity_table(table_name)
         except Exception:
@@ -149,6 +167,6 @@ class LDaCATabulator:
     # ------------------------------------------------------------
     # TODO remove id variables
     def get_speaker(self):
-        df = self._load_entity_table("Speaker")
-        return drop_id_columns(df)
+        return self._load_entity_table("Speaker")
+        
 
