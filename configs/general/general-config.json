@@ -104,10 +104,6 @@
         },
         "Speaker": {
             "all_props": [],
-            "expand_props": [
-                "name",
-                "nationality"
-            ],
             "ignore_props": [
                 "entity_id",
                 "@type"
