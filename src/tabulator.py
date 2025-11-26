@@ -49,41 +49,6 @@ class LDaCATabulator:
 
         # What property contains the text file
         self.tb.text_prop = text_prop
-
-    def _filter_ignored_columns(self, table_name, df):
-        
-        config = self.tb.config
-        tables_cfg = config.get("tables", {})
-        table_cfg = tables_cfg.get(table_name, {})
-
-        cols = list(df.columns)
-        to_drop = set()
-
-        # Direct ignore_props for this table
-        direct_ignores = table_cfg.get("ignore_props", [])
-        for prop in direct_ignores:
-            for c in cols:
-                if c == prop or c.startswith(f"{prop}_"):
-                    to_drop.add(c)
-
-        # Expanded properties
-        expand_props = table_cfg.get("expand_props", [])
-        all_ignored_props = set()
-        for t_cfg in tables_cfg.values():
-            for ip in t_cfg.get("ignore_props", []):
-                all_ignored_props.add(ip)
-
-        for exp in expand_props:  
-            for ip in all_ignored_props:
-                prefix = f"{exp}_{ip}"
-                for c in cols:
-                    if c == prefix or c.startswith(prefix + "_"):
-                        to_drop.add(c)
-
-        if to_drop:
-            df = df.drop(columns=[c for c in to_drop if c in df.columns])
-
-        return df
     
     def _load_entity_table(self, table_name: str):
         try:
@@ -104,9 +69,6 @@ class LDaCATabulator:
 
         # Load main RepositoryObject table
         df = load_table_from_db(str(self.database), "RepositoryObject")
-
-        # ignore_props 
-        df = self._filter_ignored_columns("RepositoryObject", df)
 
         # drop id columns
         df = drop_id_columns(df)
