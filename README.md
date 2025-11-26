@@ -1,12 +1,12 @@
 # LDaCA Tabulator
-A Python toolkit for loading, cleaning, and exploring LDaCA RO-Crate corpora.
+A Python module for loading and fetching LDaCA RO-Crate corpora entities and properties.
 
 ---
 
 ## Overview
 
-**LDaCA Tabulator** provides a simple, consistent interface for working with  
-**LDaCA RO-Crate corpora**. It automates:
+LDaCA Tabulator provides a simple, consistent interface for working with  
+LDaCA RO-Crate corpora. It automates:
 
 - Downloading a ZIP corpus from URL  
 - Extracting the RO-Crate folder 
@@ -14,7 +14,7 @@ A Python toolkit for loading, cleaning, and exploring LDaCA RO-Crate corpora.
 - Loading entity tables (RepositoryObject, Person, Organization, Speaker, etc.)  
 - Returning analysis-ready Pandas DataFrames  
 
-It wraps `ROCrateTabulator` and adds LDaCA-specific logic.
+It uses rocrate-tabular package and adds LDaCA-specific logic.
 
 ---
 
