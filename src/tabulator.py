@@ -83,6 +83,18 @@ class LDaCATabulator:
     # ------------------------------------------------------------
     # TODO This method may need to be made more memory efficient. 
     def get_text(self):
+        """
+        Load the RepositoryObject table and return it in a cleaned form.
+        If speaker information is available in the corpus, a separate column
+        containing a list of speaker names is added to each record.
+
+        Returns
+        -------
+        pandas.DataFrame
+        The cleaned RepositoryObject table, with speakers included when a
+        corresponding junction table is present.
+        """
+
         self.tb.entity_table("RepositoryObject")
 
         # Load main RepositoryObject table
