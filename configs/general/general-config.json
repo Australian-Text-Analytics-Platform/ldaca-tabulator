@@ -10,12 +10,13 @@
         "recipient",
         "ldac:communicationMode",
         "ldac:indexableText",
-        "ldac:mainText"
+        "ldac:mainText",
+        "ldac:speaker",
+        "ldac:annotationType"
     ],
     "ignore_props": [
         "@type",
         "conformsTo",
-        "entity_id",
         "conformsTo_id",
         "identifier",
 
@@ -99,6 +100,13 @@
                 "ldac:materialType_id",
                 "isPartOf",
                 "isPartOf_id"
+            ]
+        },
+        "Speaker": {
+            "all_props": [],
+            "ignore_props": [
+                "entity_id",
+                "@type"
             ]
         }
     }
