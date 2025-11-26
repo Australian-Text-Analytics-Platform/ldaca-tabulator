@@ -198,6 +198,15 @@ class LDaCATabulator:
     # ------------------------------------------------------------
     # TODO remove id variables
     def get_speaker(self):
+        """
+        Load and return the Speaker table from the corpus in a cleaned form.
+
+        Returns
+        -------
+        pandas.DataFrame or None
+        The cleaned Speaker table, or ``None`` if the corpus does not contain
+        a Speaker entity.
+        """
         return self._load_entity_table("Speaker")
         
 
