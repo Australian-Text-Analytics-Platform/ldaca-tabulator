@@ -164,6 +164,16 @@ class LDaCATabulator:
 
     # TODO it does not remove properties of ids
     def get_people(self):
+        """
+        Load and return the Person table from the corpus in a cleaned form.
+
+        Returns
+        -------
+        pandas.DataFrame or None
+        The cleaned Person table, or ``None`` if the corpus does not contain
+        a Person entity.
+        """
+
         return self._load_entity_table("Person")
  
 
