@@ -208,5 +208,15 @@ class LDaCATabulator:
         a Speaker entity.
         """
         return self._load_entity_table("Speaker")
+    
+    def corpus_specific_tables():
+        """
+        - So this method will take config file from the configs folder of specific corpus.
+        - The config file should not be the argument of the method.
+        - Output would be first show the tables to the user so that they can select and download
+        entities they want.
+        - then print the result of the tables user selected.
+        """
+        pass
         
 
