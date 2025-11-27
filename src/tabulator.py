@@ -76,7 +76,7 @@ class LDaCATabulator:
             return None
         
         df = load_table_from_db(str(self.database), table_name)
-        return drop_id_columns(df)
+        return df
 
     # ------------------------------------------------------------
     # get_text()
@@ -99,9 +99,6 @@ class LDaCATabulator:
 
         # Load main RepositoryObject table
         df = load_table_from_db(str(self.database), "RepositoryObject")
-
-        # drop id columns
-        df = drop_id_columns(df)
         
         # The speaker junction table 
         speaker_junction = "RepositoryObject_ldac:speaker"
@@ -134,7 +131,7 @@ class LDaCATabulator:
                 how="left"
             )
 
-            # Group speakers by RepositoryObject_id → ONLY names
+            # Group speakers by RepositoryObject_id
             speaker_names = (
                 merged.groupby("entity_id")["name"]
                     .apply(lambda x: list(x.dropna()))
@@ -155,7 +152,7 @@ class LDaCATabulator:
                 lambda x: x if isinstance(x, list) else []
             )
 
-        return df
+        return drop_id_columns(df)
 
 
     # ------------------------------------------------------------
