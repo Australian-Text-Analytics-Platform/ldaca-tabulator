@@ -5,6 +5,7 @@ from .utils import (unzip_corpus,
                     drop_id_columns)
 import sqlite3
 import pandas as pd
+import re
 
 class LDaCATabulator:
     """
@@ -18,7 +19,7 @@ class LDaCATabulator:
     Parameters
     ----------
     url : str
-        URL of the zipped RO-Crate corpus (arcp:// or http://).
+        URL of the zipped RO-Crate corpus (http://).
     config_path : str, optional
         Path to the LDaCA configuration JSON controlling per-table rules.
     text_prop : str, optional
@@ -206,14 +207,87 @@ class LDaCATabulator:
         """
         return self._load_entity_table("Speaker")
     
-    def corpus_specific_tables():
+    # -------------------------------------------------------------
+    # corpus_specific_tables
+    # -------------------------------------------------------------
+    def corpus_specific_tables_list(self) -> str:
         """
-        - So this method will take config file from the configs folder of specific corpus.
-        - The config file should not be the argument of the method.
-        - Output would be first show the tables to the user so that they can select and download
-        entities they want.
-        - then print the result of the tables user selected.
+        Return a list of corpus-specific tables defined in this corpus' config file.
+
+        This method extracts the numeric corpus identifier from the corpus URL,
+        loads the corresponding configuration file, and returns the names of the 
+        tables that are specific to that corpus. These tables are defined under 
+        the ``"tables"`` section of the config JSON.
+
+        Returns
+        -------
+        str
+            A user-friendly message listing the available tables and guiding the
+            user to call ``corpus_specific_tables(table_name)`` to load the data.
+
+        Notes
+        -----
+        - Expects corpus ZIP URLs that contain a pattern like ``~1234567.``  
+        Example: ``...hdl10.25949~24769173.v1.zip``
+        - ``load_config`` must accept a filename or a corpus identifier mapped to 
+        the correct JSON configuration file.
         """
-        pass
+        # Extract corpus ID from the URL (digits after "~" and before ".")
+        match = re.search(r'~(\d+)\.', self.url)
+        if not match:
+            return "Could not extract corpus ID from URL. Cannot load config."
+
+        corpus_id = match.group(1)
+
+        # Load the specific corpus config file
+        # Adjust this path depending on how your configs are stored
+        config = load_config(f"./configs/corpora/{corpus_id}.json")
+
+        # Extract table names from the loaded config
+        tables = list(config.get("tables", {}).keys())
+
+        return (
+            f"Corpus-specific tables: {tables}. "
+            f"Use corpus_specific_tables(table_name) to load the data."
+        )
+
+      
+    def corpus_specific_tables(self, table: str):
+        """
+        Load and return a cleaned corpus-specific table.
+
+        This method:
+        1. Extracts the numeric corpus identifier from the corpus URL.
+        2. Loads the corresponding per-corpus configuration file located at
+           ``configs/corpora/``.
+        3. Updates ``self.tb.config`` with that configuration.
+        4. Loads the requested table using ``_load_entity_table``.
+        5. Removes ID-like columns using ``drop_id_columns``.
+
+        Parameters
+        ----------
+        table : str
+            Name of the corpus-specific table to load.
+
+        Returns
+        -------
+        pandas.DataFrame or None
+            The cleaned DataFrame for the requested table, or ``None`` if the table
+            does not exist in this corpus.
+
+        Notes
+        -----
+        - Expects URLs containing a pattern like ``~1234567.``  
+        Example: ``...hdl10.25949~24769173.v1.zip``.
+        - The config file must exist at ``configs/corpora/{id}.json`` where ``id``
+        is the extracted numeric identifier.
+        """
+        
+        match = re.search(r'~(\d+)\.', self.url).group(1)
+    
+        self.tb.config = load_config(f"configs/corpora/{match}.json")
+        
+        df = self._load_entity_table(table)
+        return drop_id_columns(df)
         
 
