@@ -1,15 +1,54 @@
 
 from src.utils import (load_config,
                        load_table_from_db,
-                       drop_id_columns)
+                       drop_id_columns,
+                       unzip_corpus)
 import pandas as pd
-import json
 from rocrate_tabular.tabulator import ROCrateTabulator
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 from pathlib import Path
-from io import BytesIO
 from tempfile import mkdtemp
+from pathlib import Path
+from unittest.mock import patch, MagicMock
+
+def test_unzip_corpus(tmp_path):
+    # Path to your real test ZIP file
+    zip_path = Path("tests/crates/languageFamily.zip")
+
+    # Read actual zip bytes
+    zip_bytes = zip_path.read_bytes()
+
+    # Mock response from requests.get
+    mock_response = MagicMock()
+    mock_response.content = zip_bytes
+    mock_response.raise_for_status = MagicMock()
+
+    # Mock ROCrateTabulator
+    fake_tb = MagicMock()
+
+    # Use patch to replace requests.get with our fake one
+    with patch("requests.get", return_value=mock_response):
+        db_path, extracted_path = unzip_corpus(
+            zip_url="http://fake-url.com/zip",
+            tb=fake_tb,
+            folder_name="testCorpus",
+            db_name="testCorpus.db",
+        )
+
+    # ---- Assertions ----
+    # Folder created
+    assert extracted_path.exists()
+
+    # Check at least 1 file extracted (your ZIP has files)
+    extracted_files = list(extracted_path.iterdir())
+    assert len(extracted_files) > 0
+
+    # DB path correct
+    assert db_path == Path.cwd() / "testCorpus.db"
+
+    # Ensure crate_to_db was called
+    fake_tb.crate_to_db.assert_called_once()
 
 def test_load_config(path = "./tests/crates/minimal/ro-crate-metadata.json"):
     config_file = load_config(path)
@@ -54,3 +93,5 @@ def _df_from_json_ids():
 def test_drop_id_columns():
     df = _df_from_json_ids()
     assert set(drop_id_columns(df).columns) == {"name", "text"}
+
+
