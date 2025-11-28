@@ -36,19 +36,16 @@ def test_load_table_from_db():
 
 
 
-def _df_from_json_ids(json_path="./config/config-ids.json"):
+def _df_from_json_ids():
     """
     Data frame only includes columns not rows. As we are interested in removing columns of ids
     """
-    # Load JSON config
-    with open(json_path, "r") as f:
-        config = json.load(f)
-
-    id_cols = config.get("ids", [])
 
     data = {
-        "name": [],    # non-ID property 1
-        "text": [],  # non-ID property 2
+        "name": [],  
+        "text": [],
+        "name_id": [],
+        "name_id_1": []
     }
 
     return pd.DataFrame(data)
@@ -57,4 +54,3 @@ def _df_from_json_ids(json_path="./config/config-ids.json"):
 def test_drop_id_columns():
     df = _df_from_json_ids()
     assert set(drop_id_columns(df).columns) == {"name", "text"}
-
