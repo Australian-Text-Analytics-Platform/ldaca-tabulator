@@ -159,8 +159,7 @@ class LDaCATabulator:
     # ------------------------------------------------------------
     # get_people()
     # ------------------------------------------------------------
-
-    # TODO it does not remove properties of ids
+    
     def get_people(self):
         """
         Load and return the Person table from the corpus in a cleaned form.
@@ -194,7 +193,7 @@ class LDaCATabulator:
     # ------------------------------------------------------------
     # get_speaker()
     # ------------------------------------------------------------
-    # TODO remove id variables
+    
     def get_speaker(self):
         """
         Load and return the Speaker table from the corpus in a cleaned form.
