@@ -7,6 +7,10 @@ import sqlite3
 import pandas as pd
 import re
 
+GENERAL_CONFIG = "./configs/general/general-config.json"
+CORPUS_CONFIG_DIR = "./configs/corpora/"
+TEXT_PROP = "ldac:mainText"
+
 class LDaCATabulator:
     """
     Loader and processor for LDaCA RO-Crate corpora.
@@ -38,7 +42,7 @@ class LDaCATabulator:
     """
 
 
-    def __init__(self, url, config_path="./configs/general/general-config.json", text_prop="ldac:mainText"):
+    def __init__(self, url):
         self.url = url
         self.tb = ROCrateTabulator()
 
@@ -46,10 +50,10 @@ class LDaCATabulator:
         self.database, self.extract_to = unzip_corpus(url, tb=self.tb)
 
         # Load LDaCA config 
-        self.tb.config = load_config(config_path)
+        self.tb.config = load_config(GENERAL_CONFIG)
 
         # What property contains the text file
-        self.tb.text_prop = text_prop
+        self.tb.text_prop = TEXT_PROP
     
     def _load_entity_table(self, table_name: str):
         """
@@ -233,7 +237,7 @@ class LDaCATabulator:
 
         # Load the specific corpus config file
         # Adjust this path depending on how your configs are stored
-        config = load_config(f"./configs/corpora/{corpus_id}.json")
+        config = load_config(f"{CORPUS_CONFIG_DIR}{corpus_id}.json")
 
         # Extract table names from the loaded config
         tables = list(config.get("tables", {}).keys())
@@ -269,7 +273,7 @@ class LDaCATabulator:
         
         match = re.search(r'~(\d+)\.', self.url).group(1)
     
-        self.tb.config = load_config(f"configs/corpora/{match}.json")
+        self.tb.config = load_config(f"{CORPUS_CONFIG_DIR}{match}.json")
         
         df = self._load_entity_table(table)
         return drop_id_columns(df)
