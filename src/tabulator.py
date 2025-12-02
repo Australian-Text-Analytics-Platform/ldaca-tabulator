@@ -113,7 +113,7 @@ class LDaCATabulator:
         )["name"].tolist()
         
         if speaker_junction not in tables:
-            pass
+            return drop_id_columns(df)
         else:
 
             # Load junction table
