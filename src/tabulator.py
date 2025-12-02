@@ -223,13 +223,6 @@ class LDaCATabulator:
         str
             A user-friendly message listing the available tables and guiding the
             user to call ``corpus_specific_tables(table_name)`` to load the data.
-
-        Notes
-        -----
-        - Expects corpus ZIP URLs that contain a pattern like ``~1234567.``  
-        Example: ``...hdl10.25949~24769173.v1.zip``
-        - ``load_config`` must accept a filename or a corpus identifier mapped to 
-        the correct JSON configuration file.
         """
         # Extract corpus ID from the URL (digits after "~" and before ".")
         match = re.search(r'~(\d+)\.', self.url)
@@ -270,16 +263,8 @@ class LDaCATabulator:
 
         Returns
         -------
-        pandas.DataFrame or None
-            The cleaned DataFrame for the requested table, or ``None`` if the table
-            does not exist in this corpus.
-
-        Notes
-        -----
-        - Expects URLs containing a pattern like ``~1234567.``  
-        Example: ``...hdl10.25949~24769173.v1.zip``.
-        - The config file must exist at ``configs/corpora/{id}.json`` where ``id``
-        is the extracted numeric identifier.
+        pandas.DataFrame
+            The cleaned DataFrame for the requested table.
         """
         
         match = re.search(r'~(\d+)\.', self.url).group(1)
