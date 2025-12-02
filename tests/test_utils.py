@@ -77,7 +77,8 @@ def test_load_table_from_db():
 
 def _df_from_json_ids():
     """
-    Data frame only includes columns not rows. As we are interested in removing columns of ids
+    Data frame only includes columns not rows. 
+    As we are interested in removing columns of ids
     """
 
     data = {

@@ -15,7 +15,7 @@ def unzip_corpus(
     tb: ROCrateTabulator,
     folder_name: str | None = None,
     db_name: str | None = None,
-    overwrite: bool = False, #HACK If already exist. It may give error or use the same corpus. Use default True
+    overwrite: bool = False, #HACK If already exist, it may give error or use the same corpus. Use default True
 ):
     """
     Download, extract, and tabulate an RO-Crate corpus into a database.
@@ -58,7 +58,7 @@ def unzip_corpus(
       updated regardless of extraction behavior.
     """
 
-    # Resolve target names/paths
+    # Resolve target names
     if folder_name is None:
         folder_name = "rocrate"
     if db_name is None:
