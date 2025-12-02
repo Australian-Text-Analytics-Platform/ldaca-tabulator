@@ -6,11 +6,14 @@ from .utils import (unzip_corpus,
 import sqlite3
 import pandas as pd
 import re
+from dataclasses import dataclass, field
+from pathlib import Path
 
 GENERAL_CONFIG = "./configs/general/general-config.json"
 CORPUS_CONFIG_DIR = "./configs/corpora/"
 TEXT_PROP = "ldac:mainText"
 
+@dataclass
 class LDaCATabulator:
     """
     Loader and processor for LDaCA RO-Crate corpora.
@@ -41,19 +44,25 @@ class LDaCATabulator:
         Directory where the corpus archive was extracted.
     """
 
+    url: str
+    text_prop: str = TEXT_PROP
+    config_path: str = GENERAL_CONFIG
+    tb: ROCrateTabulator = field(default_factory=ROCrateTabulator)
+    database: Path | None = None
+    extract_to: Path | None = None
 
-    def __init__(self, url):
-        self.url = url
-        self.tb = ROCrateTabulator()
-
-        # Download and unzip
-        self.database, self.extract_to = unzip_corpus(url, tb=self.tb)
-
+    # Download and unzip
+    def __post_init__(self):
+        self.database, self.extract_to = unzip_corpus(
+        self.url,
+        tb=self.tb
+        )
+        
         # Load LDaCA config 
-        self.tb.config = load_config(GENERAL_CONFIG)
-
-        # What property contains the text file
-        self.tb.text_prop = TEXT_PROP
+        self.tb.config = load_config(self.config_path)
+        
+        # Set text property
+        self.tb.text_prop = self.text_prop
     
     def _load_entity_table(self, table_name: str):
         """
@@ -174,8 +183,10 @@ class LDaCATabulator:
         The cleaned Person table, or ``None`` if the corpus does not contain
         a Person entity.
         """
+        
+        df = self._load_entity_table("Person")
 
-        return self._load_entity_table("Person")
+        return drop_id_columns(df)
  
 
     # ------------------------------------------------------------
@@ -191,7 +202,10 @@ class LDaCATabulator:
         The cleaned Organization table, or ``None`` if the corpus does not
         contain an Organization entity.
         """
-        return self._load_entity_table("Organization")
+        
+        df = self._load_entity_table("Organization")
+        
+        return drop_id_columns(df)
     
 
     # ------------------------------------------------------------
@@ -208,7 +222,9 @@ class LDaCATabulator:
         The cleaned Speaker table, or ``None`` if the corpus does not contain
         a Speaker entity.
         """
-        return self._load_entity_table("Speaker")
+        
+        df  = self._load_entity_table("Speaker")
+        return drop_id_columns(df)
     
     # -------------------------------------------------------------
     # corpus_specific_tables
