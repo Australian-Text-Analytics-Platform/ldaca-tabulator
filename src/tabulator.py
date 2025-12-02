@@ -27,10 +27,6 @@ class LDaCATabulator:
     ----------
     url : str
         URL of the zipped RO-Crate corpus (http://).
-    config_path : str, optional
-        Path to the LDaCA configuration JSON controlling per-table rules.
-    text_prop : str, optional
-        Property name containing the main text content for RepositoryObjects.
 
     Attributes
     ----------
