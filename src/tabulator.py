@@ -18,7 +18,7 @@ class LDaCATabulator:
     """
     Loader and processor for LDaCA RO-Crate corpora.
 
-    This class wraps around ``ROCrateTabulator`` to provide a simple interface
+    This class wraps around ``ROCrateTabulator`` package to provide a simple interface
     for extracting a corpus, accessing its tables, and applying configuration-
     based cleaning rules. It aims to make LDaCA corpora easy to inspect and
     convert into clean, analysis-ready DataFrames with minimal user code.
@@ -26,7 +26,7 @@ class LDaCATabulator:
     Parameters
     ----------
     url : str
-        URL of the zipped RO-Crate corpus (http://).
+        URL of the zipped RO-Crate corpus.
 
     Attributes
     ----------
@@ -65,8 +65,7 @@ class LDaCATabulator:
         Load an entity table from the extracted SQLite database.
 
         This method checks whether the table exists in the RO-Crate, loads it
-        from the database, and applies standard cleaning by removing internal
-        identifier columns.
+        from the database.
 
         Parameters
         ----------
@@ -91,18 +90,16 @@ class LDaCATabulator:
     # ------------------------------------------------------------
     # get_text()
     # ------------------------------------------------------------
-    # TODO This method may need to be made more memory efficient. 
     def get_text(self):
         """
-        Load the RepositoryObject table and return it in a cleaned form.
-        If speaker information is available in the corpus, a separate column
-        containing a list of speaker names is added to each record.
+        Load the RepositoryObject table (a table that contain text) and return
+        it in a cleaned form. If speaker information is available in the corpus,
+        a separate column containing a list of speaker names is added to each record.
 
         Returns
         -------
         pandas.DataFrame
-        The cleaned RepositoryObject table, with speakers included when a
-        corresponding junction table is present.
+        The cleaned RepositoryObject table.
         """
 
         self.tb.entity_table("RepositoryObject")
@@ -231,8 +228,7 @@ class LDaCATabulator:
 
         This method extracts the numeric corpus identifier from the corpus URL,
         loads the corresponding configuration file, and returns the names of the 
-        tables that are specific to that corpus. These tables are defined under 
-        the ``"tables"`` section of the config JSON.
+        tables that are specific to that corpus.
 
         Returns
         -------
