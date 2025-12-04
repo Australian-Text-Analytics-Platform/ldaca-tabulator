@@ -47,17 +47,15 @@ class LDaCATabulator:
     database: Path | None = None
     extract_to: Path | None = None
 
-    # Download and unzip
+    # Download and unzip, load config, set test property
     def __post_init__(self):
         self.database, self.extract_to = unzip_corpus(
         self.url,
         tb=self.tb
         )
         
-        # Load LDaCA config 
         self.tb.config = load_config(self.config_path)
         
-        # Set text property
         self.tb.text_prop = self.text_prop
     
     def _load_entity_table(self, table_name: str):
