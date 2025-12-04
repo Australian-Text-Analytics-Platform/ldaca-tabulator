@@ -44,8 +44,6 @@ class LDaCATabulator:
     text_prop: str = TEXT_PROP
     config_path: str = GENERAL_CONFIG
     tb: ROCrateTabulator = field(default_factory=ROCrateTabulator)
-    database: Path | None = None
-    extract_to: Path | None = None
 
     # Download and unzip, load config, set test property
     def __post_init__(self):
