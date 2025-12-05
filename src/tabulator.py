@@ -47,11 +47,13 @@ class LDaCATabulator:
     database: Path | None = None
     extract_to: Path | None = None
 
-    # Download and unzip
     def __post_init__(self):
+        
+        # Download and unzip
         self.database, self.extract_to = unzip_corpus(
-        self.url,
-        tb=self.tb
+            self.url,
+            tb=self.tb # Could add in **kwargs to allow use of user specified 
+                       # folder name?
         )
         
         # Load LDaCA config 
@@ -107,9 +109,11 @@ class LDaCATabulator:
         # Load main RepositoryObject table
         df = load_table_from_db(str(self.database), "RepositoryObject")
         
-        # The speaker junction table 
+        # The speaker junction table  <- not sure what this is or why it's
+        # important? May be because I'm not familiar with data format
         speaker_junction = "RepositoryObject_ldac:speaker"
-        
+       
+        # Could do with context management here (with conn as ...)
         conn = sqlite3.connect(str(self.database))
 
         # Check if table exists in the DB
@@ -119,7 +123,7 @@ class LDaCATabulator:
         )["name"].tolist()
         
         if speaker_junction not in tables:
-            return drop_id_columns(df)
+            return drop_id_columns(df) # what is this doing?
         else:
 
             # Load junction table
@@ -240,7 +244,6 @@ class LDaCATabulator:
         match = re.search(r'~(\d+)\.', self.url)
         if not match:
             return "Could not extract corpus ID from URL. Cannot load config."
-
         corpus_id = match.group(1)
 
         # Load the specific corpus config file
