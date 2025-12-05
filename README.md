@@ -24,7 +24,7 @@ Clone the repository and install dependencies using `uv`:
 
 ```bash
 git clone https://github.com/Australian-Text-Analytics-Platform/ldaca-tabulator.git
-cd ldaca-loader
+cd ldaca-tabulator
 uv sync
 ```
 
