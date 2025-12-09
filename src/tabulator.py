@@ -256,9 +256,10 @@ class LDaCATabulator:
         return df
 
     # ------------------------------------------------------------
-    # get_text()
+    # Class methods
     # ------------------------------------------------------------
-    # TODO This method may need to be made more memory efficient. 
+    
+    # get_text() method
     def get_text(self):
         """
         Load the RepositoryObject table and return it in a cleaned form.
@@ -289,7 +290,7 @@ class LDaCATabulator:
         )["name"].tolist()
         
         if speaker_junction not in tables:
-            return drop_id_columns(df)
+            return self.self.drop_id_columns(df)
         else:
 
             # Load junction table
@@ -329,13 +330,9 @@ class LDaCATabulator:
                 lambda x: x if isinstance(x, list) else []
             )
 
-        return drop_id_columns(df)
+        return self.drop_id_columns(df)
 
-
-    # ------------------------------------------------------------
-    # get_people()
-    # ------------------------------------------------------------
-    
+    # get_people() method
     def get_people(self):
         """
         Load and return the Person table from the corpus in a cleaned form.
@@ -349,12 +346,9 @@ class LDaCATabulator:
         
         df = self._load_entity_table("Person")
 
-        return drop_id_columns(df)
- 
-
-    # ------------------------------------------------------------
-    # get_organization()
-    # ------------------------------------------------------------
+        return self.drop_id_columns(df)
+    
+    # get_organization() method
     def get_organization(self):
         """
         Load and return the Organization table from the corpus in a cleaned form.
@@ -368,13 +362,9 @@ class LDaCATabulator:
         
         df = self._load_entity_table("Organization")
         
-        return drop_id_columns(df)
+        return self.drop_id_columns(df)
     
-
-    # ------------------------------------------------------------
-    # get_speaker()
-    # ------------------------------------------------------------
-    
+    # get_speaker() method
     def get_speaker(self):
         """
         Load and return the Speaker table from the corpus in a cleaned form.
@@ -387,7 +377,7 @@ class LDaCATabulator:
         """
         
         df  = self._load_entity_table("Speaker")
-        return drop_id_columns(df)
+        return self.drop_id_columns(df)
     
     # -------------------------------------------------------------
     # corpus_specific_tables
@@ -455,6 +445,6 @@ class LDaCATabulator:
         self.tb.config = self._load_config(f"{CORPUS_CONFIG_DIR}{match}.json")
         
         df = self._load_entity_table(table)
-        return drop_id_columns(df)
+        return self.drop_id_columns(df)
         
 
