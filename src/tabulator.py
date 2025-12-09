@@ -44,7 +44,6 @@ class LDaCATabulator:
 
     url: str
     text_prop: str = TEXT_PROP
-    config_path: str = GENERAL_CONFIG
     tb: ROCrateTabulator = field(default_factory=ROCrateTabulator)
 
     # Download and unzip
@@ -54,7 +53,7 @@ class LDaCATabulator:
         tb=self.tb
         )
         
-        self.tb.config = self._load_config(self.config_path)
+        self.tb.config = self.load_config(GENERAL_CONFIG)
         
         self.tb.text_prop = self.text_prop
         
@@ -63,12 +62,12 @@ class LDaCATabulator:
     # -----------------------------------------------
     
     def _unzip_corpus(
-    zip_url: str,
-    tb: ROCrateTabulator,
-    folder_name: str | None = None,
-    db_name: str | None = None,
-    overwrite: bool = False, #HACK If already exist, it may give error or use the same corpus. Use default True
-    ):
+        zip_url: str,
+        tb: ROCrateTabulator,
+        folder_name: str | None = None,
+        db_name: str | None = None,
+        overwrite: bool = False, #HACK If already exist, it may give error or use the same corpus. Use default True
+        ):
         """
         Download, extract, and tabulate an RO-Crate corpus into a database.
 
@@ -140,7 +139,8 @@ class LDaCATabulator:
     
     
     # loading config file
-    def _load_config(config_path: str):
+    @staticmethod
+    def load_config(config_path: str):
         """
         Load and parse a JSON configuration file.
 
@@ -406,7 +406,7 @@ class LDaCATabulator:
 
         # Load the specific corpus config file
         # Adjust this path depending on how your configs are stored
-        config = self._load_config(f"{CORPUS_CONFIG_DIR}{corpus_id}.json")
+        config = self.load_config(f"{CORPUS_CONFIG_DIR}{corpus_id}.json")
 
         # Extract table names from the loaded config
         tables = list(config.get("tables", {}).keys())
@@ -442,7 +442,7 @@ class LDaCATabulator:
         
         match = re.search(r'~(\d+)\.', self.url).group(1)
     
-        self.tb.config = self._load_config(f"{CORPUS_CONFIG_DIR}{match}.json")
+        self.tb.config = self.load_config(f"{CORPUS_CONFIG_DIR}{match}.json")
         
         df = self._load_entity_table(table)
         return self.drop_id_columns(df)
