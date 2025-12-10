@@ -1,4 +1,3 @@
-
 from src.tabulator import LDaCATabulator
 import pandas as pd
 from rocrate_tabular.tabulator import ROCrateTabulator
@@ -13,7 +12,10 @@ import pytest
 # Helper to bypass __post_init__ (which downloads/extracts ZIP)
 # --------------------------------------------------------------------
 def _blank_instance():
-    """Create an LDaCATabulator instance without running __post_init__."""
+    """
+    Create an LDaCATabulator instance without running __post_init__
+    to avoid running get.request() function.
+    """
     return LDaCATabulator.__new__(LDaCATabulator)
 
 
