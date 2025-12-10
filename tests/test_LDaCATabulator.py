@@ -1,25 +1,12 @@
 
-from src.tabulator import (#load_config,
-                           #load_table_from_db,
-                           #drop_id_columns,
-                           #unzip_corpus,
-                           LDaCATabulator)
-import pandas as pd
-from rocrate_tabular.tabulator import ROCrateTabulator
-from pathlib import Path
-from unittest.mock import patch, MagicMock
-from tempfile import mkdtemp
-import shutil
-import zipfile
-import sqlite3
-
-import pandas as pd
-from pathlib import Path
-from unittest.mock import patch, MagicMock
-from tempfile import mkdtemp
-
-from rocrate_tabular.tabulator import ROCrateTabulator
 from src.tabulator import LDaCATabulator
+import pandas as pd
+from rocrate_tabular.tabulator import ROCrateTabulator
+from pathlib import Path
+from unittest.mock import patch, MagicMock
+from tempfile import mkdtemp
+import sqlite3
+import pytest
 
 
 # --------------------------------------------------------------------
@@ -62,7 +49,7 @@ def test_unzip_corpus(tmp_path):
 
 
 # --------------------------------------------------------------------
-# Test: load_config (static method)
+# Test: load_config
 # --------------------------------------------------------------------
 def test_load_config():
     config = LDaCATabulator.load_config(
@@ -119,39 +106,56 @@ def _df_from_json_ids():
 
 
 # --------------------------------------------------------------------
-# Test: drop_id_columns (static method)
+# Test: drop_id_columns
 # --------------------------------------------------------------------
 def test_drop_id_columns():
     df = _df_from_json_ids()
     out = LDaCATabulator.drop_id_columns(df)
     assert set(out.columns) == {"name", "text"}
+    
 
-def mock_requests_get(*args, **kwargs):
-    # Load local zip file into memory
-    with open("tests/crates/languageFamily.zip", "rb") as f:
-        content = f.read()
+# --------------------------------------------------------------------
+# Test: methods in class, that is, get_text(), get_people(), 
+#       and get_organization
+# --------------------------------------------------------------------    
+@pytest.fixture
+def tabulator():
+    """
+    Fixture that:
+    - Loads your local test ZIP
+    - Mocks requests.get()
+    - Creates a fully initialized LDaCATabulator
+    """
 
-    class MockResponse:
-        def __init__(self, content):
-            self.content = content
-        def raise_for_status(self):
-            pass
+    zip_path = Path("tests/crates/languageFamily.zip")
+    zip_bytes = zip_path.read_bytes()
 
-    return MockResponse(content)
+    # Create fake HTTP response
+    mock_response = MagicMock()
+    mock_response.content = zip_bytes
+    mock_response.raise_for_status = MagicMock()
 
+    # Mock requests.get globally for this fixture
+    with patch("requests.get", return_value=mock_response):
+        tab = LDaCATabulator("https://example.com/fake.zip")
 
-@patch("requests.get", side_effect=mock_requests_get)
-def test_ldaca_tabulator_load_local_zip(_mock_get):
-    # URL is irrelevant now; it is intercepted
-    fake_url = "https://example.com/not-real.zip"
-    tab = LDaCATabulator(fake_url)
+    return tab
 
-    # Test a method that requires the ZIP
-    df = tab.get_text()
-
-    # Validate the data was processed
+def test_get_text(tabulator):
+    df = tabulator.get_text()
     assert df is not None
     assert not df.empty
 
     
+def test_get_people(tabulator):
+    df = tabulator.get_people()
+    assert df is not None
+    assert isinstance(df, pd.DataFrame)
+
+
+def test_get_organization(tabulator):
+    df = tabulator.get_organization()
+    assert df is not None
+    assert isinstance(df, pd.DataFrame)
+
 
