@@ -48,6 +48,7 @@ class LDaCATabulator:
 
     # Download and unzip
     def __post_init__(self):
+        
         self.database, self.extract_to = self._unzip_corpus(
         self.url,
         tb=self.tb
@@ -62,6 +63,7 @@ class LDaCATabulator:
     # -----------------------------------------------
     
     def _unzip_corpus(
+        self,
         zip_url: str,
         tb: ROCrateTabulator,
         folder_name: str | None = None,
@@ -160,6 +162,7 @@ class LDaCATabulator:
     
     # loading table from database
     def _load_table_from_db(
+        self,
         database_path: str,
         table_name: str,
         columns: List[str] | None = None
@@ -290,7 +293,7 @@ class LDaCATabulator:
         )["name"].tolist()
         
         if speaker_junction not in tables:
-            return self.self.drop_id_columns(df)
+            return self.drop_id_columns(df)
         else:
 
             # Load junction table
