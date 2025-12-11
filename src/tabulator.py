@@ -265,7 +265,7 @@ class LDaCATabulator:
     # get_text() method
     def get_text(self):
         """
-        Load the RepositoryObject table and return it in a cleaned form.
+        Load the RepositoryObject table (a table that contain text) and return it in a cleaned form.
         If speaker information is available in the corpus, a separate column
         containing a list of speaker names is added to each record.
 
@@ -284,54 +284,53 @@ class LDaCATabulator:
         # The speaker junction table 
         speaker_junction = "RepositoryObject_ldac:speaker"
         
-        conn = sqlite3.connect(str(self.database))
-
-        # Check if table exists in the DB
-        tables = pd.read_sql_query(
-            "SELECT name FROM sqlite_master WHERE type='table';",
-            conn
-        )["name"].tolist()
+        with sqlite3.connect(str(self.database)) as conn:
+            # Check if table exists in the DB
+            tables = pd.read_sql_query(
+                "SELECT name FROM sqlite_master WHERE type='table';",
+                conn
+            )["name"].tolist()
         
-        if speaker_junction not in tables:
-            return self.drop_id_columns(df)
-        else:
+            if speaker_junction not in tables:
+                return df
+            else:
 
-            # Load junction table
-            junction = pd.read_sql_query(
-                f"SELECT * FROM '{speaker_junction}'", conn
-            )
+                # Load junction table
+                junction = pd.read_sql_query(
+                    f"SELECT * FROM '{speaker_junction}'", conn
+                )
 
-            # Load Person table
-            people = self._load_entity_table("Person")
+                # Load Person table
+                people = self._load_entity_table("Person")
 
-            # Merge to attach person names to each observation
-            merged = junction.merge(
-                people,
-                left_on="entity_id",
-                right_on="entity_id",
-                how="left"
-            )
+                # Merge to attach person names to each observation
+                merged = junction.merge(
+                    people,
+                    left_on="entity_id",
+                    right_on="entity_id",
+                    how="left"
+                )
 
-            # Group speakers by RepositoryObject_id
-            speaker_names = (
-                merged.groupby("entity_id")["name"]
-                    .apply(lambda x: list(x.dropna()))
-                    .reset_index()
-                    .rename(columns={"name": "speakers"})
-            )
+                # Group speakers by RepositoryObject_id
+                speaker_names = (
+                    merged.groupby("entity_id")["name"]
+                        .apply(lambda x: list(x.dropna()))
+                        .reset_index()
+                        .rename(columns={"name": "speakers"})
+                )
 
-            # Attach speakers list to RepositoryObject table
-            df = df.merge(
-                speaker_names,
-                left_on="entity_id",
-                right_on="entity_id",
-                how="left"
-            ).drop(columns=["entity_id"], errors="ignore")
+                # Attach speakers list to RepositoryObject table
+                df = df.merge(
+                    speaker_names,
+                    left_on="entity_id",
+                    right_on="entity_id",
+                    how="left"
+                ).drop(columns=["entity_id"], errors="ignore")
 
-            # Fix any NaN speakers to empty lists
-            df["speakers"] = df["speakers"].apply(
-                lambda x: x if isinstance(x, list) else []
-            )
+                # Fix any NaN speakers to empty lists
+                df["speakers"] = df["speakers"].apply(
+                   lambda x: x if isinstance(x, list) else []
+                )
 
         return self.drop_id_columns(df)
 
