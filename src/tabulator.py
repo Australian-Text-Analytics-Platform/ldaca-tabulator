@@ -1,20 +1,32 @@
-from rocrate_tabular.tabulator import ROCrateTabulator
-import sqlite3
-import pandas as pd
+# ========== Python Standard Library ==========
+import json
 import re
-from dataclasses import dataclass, field
-import requests
 import shutil
+import sqlite3
 import zipfile
+from dataclasses import dataclass, field
 from io import BytesIO
 from pathlib import Path
-import json
 from typing import List
 
+# ========== Third-Party Dependencies ==========
+import pandas as pd
+import requests
+
+# ========== Project-Specific Imports ==========
+from rocrate_tabular.tabulator import ROCrateTabulator
+
+# -------------------------
+# Constants
+# -------------------------
 GENERAL_CONFIG = "./configs/general/general-config.json"
 CORPUS_CONFIG_DIR = "./configs/corpora/"
 TEXT_PROP = "ldac:mainText"
 
+# -------------------------------------------------------------
+# Class responsible for loading, unpacking, and processing
+# LDaCA RO-Crate corpora into clean, analysis-ready tables.
+# -------------------------------------------------------------
 @dataclass
 class LDaCATabulator:
     """
