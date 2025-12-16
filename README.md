@@ -82,6 +82,6 @@ source .venv/bin/activate
 3. run a test file:
 
 ```bash
-pytest tests/LDaCATabulator.py
+pytest tests/test_LDaCATabulator.py
 ```
 
