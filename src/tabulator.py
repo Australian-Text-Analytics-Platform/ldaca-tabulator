@@ -58,9 +58,10 @@ class LDaCATabulator:
     text_prop: str = TEXT_PROP
     tb: ROCrateTabulator = field(default_factory=ROCrateTabulator)
 
-    # Download and unzip
+    
     def __post_init__(self):
         
+        # Download and unzip
         self.database, self.extract_to = self._unzip_corpus(
         self.url,
         tb=self.tb
