@@ -9,7 +9,7 @@ import pytest
 
 
 # --------------------------------------------------------------------
-# Helper to bypass __post_init__ (which downloads/extracts ZIP)
+# Helper to bypass __post_init__ (which extracts ZIP)
 # --------------------------------------------------------------------
 def _blank_instance():
     """
@@ -61,7 +61,7 @@ def test_load_config():
 
 
 # --------------------------------------------------------------------
-# Helper: create a minimal DB from a folder
+# Helper: create a DB from a folder
 # --------------------------------------------------------------------
 def _create_db(tb: ROCrateTabulator, folder: str | Path, db_name: str):
     folder_path = Path(folder)
@@ -96,7 +96,7 @@ def test_load_table_from_db(tmp_path):
 
 
 # --------------------------------------------------------------------
-# Helper DF for testing drop_id_columns
+# Helper df for testing drop_id_columns
 # --------------------------------------------------------------------
 def _df_from_json_ids():
     return pd.DataFrame({
