@@ -24,7 +24,7 @@ Clone the repository and install dependencies using `uv`:
 
 ```bash
 git clone https://github.com/Australian-Text-Analytics-Platform/ldaca-tabulator.git
-cd ldaca-loader ## Incorrect name
+cd ldaca-tabulator
 uv sync
 ```
 
@@ -59,5 +59,29 @@ This returns a cleaned DataFrame that includes the text data and metadata for ea
 ```python 
 people_df = ldac.get_people()
 people_df.head()
+```
+
+### Running tests 
+
+To run the test suite locally:
+
+1. Clone the repository and install dependencies with `uv`:
+
+```bash
+git clone https://github.com/Australian-Text-Analytics-Platform/ldaca-tabulator.git
+cd ldaca-tabulator
+uv sync
+```
+
+2. Activate the virtual environment created by `uv`:
+    
+```bash
+source .venv/bin/activate
+```
+
+3. run a test file:
+
+```bash
+pytest tests/test_LDaCATabulator.py
 ```
 
