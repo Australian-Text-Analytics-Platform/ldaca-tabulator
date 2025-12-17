@@ -1,4 +1,4 @@
-from src.tabulator import LDaCATabulator
+from ldacatabulator.tabulator import LDaCATabulator
 import pandas as pd
 from rocrate_tabular.tabulator import ROCrateTabulator
 from pathlib import Path
@@ -15,6 +15,7 @@ def _blank_instance():
     """
     Create an LDaCATabulator instance without running __post_init__
     to avoid running get.request() function.
+    
     """
     return LDaCATabulator.__new__(LDaCATabulator)
 
@@ -118,7 +119,7 @@ def test_drop_id_columns():
 
 # --------------------------------------------------------------------
 # Test: methods in class, that is, get_text(), get_people(), 
-#       and get_organization
+#   and get_organization
 # --------------------------------------------------------------------    
 @pytest.fixture
 def tabulator():
