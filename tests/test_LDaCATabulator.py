@@ -1,4 +1,4 @@
-from src.tabulator import LDaCATabulator
+from ldacatabulator.tabulator import LDaCATabulator
 import pandas as pd
 from rocrate_tabular.tabulator import ROCrateTabulator
 from pathlib import Path

@@ -9,7 +9,7 @@ rocrate.db
 .DS_Store
 
 # ignore python cache files
-src/__pycache__/
+ldacatabulator/__pycache__/
 tests/__pycache__/
 
 # ignore .vscode
