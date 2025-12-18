@@ -21,6 +21,12 @@ tests/__pycache__/
 # ignore python version
 .python-version
 
+# Ignore vim 
+.swp
+
+# Ignore jupyter files
+.ipynb_checkpoints/
+
 # ignore test folders and databases when created
 testCorpus/
 tests/crates/languageFamily/languageFamily.db
