@@ -3,6 +3,9 @@ name = "ldaca-loader"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
+license = "MIT"
+[project.license-files]
+paths = ["LICENSE.txt"]
 requires-python = ">=3.12"
 dependencies = [
     "dataclasses>=0.8",
@@ -15,6 +18,8 @@ dependencies = [
     "rocrate-tabular",
     "tqdm>=4.67.1",
 ]
+
+
 
 [tool.uv.sources]
 rocrate-tabular = { git = "https://github.com/Sydney-Informatics-Hub/rocrate-tabular.git" }
