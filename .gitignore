@@ -21,7 +21,7 @@ tests/__pycache__/
 # ignore python version
 .python-version
 
-# Ignore vim 
+# ignore vim 
 .swp
 
 # Ignore jupyter files
@@ -31,4 +31,7 @@ tests/__pycache__/
 testCorpus/
 tests/crates/languageFamily/languageFamily.db
 corpus_test/
+
+# ignore src folder
+src/__pycache__
 

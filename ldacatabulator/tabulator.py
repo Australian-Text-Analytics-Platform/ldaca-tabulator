@@ -5,7 +5,6 @@ import shutil
 import sqlite3
 import zipfile
 from dataclasses import dataclass, field
-from io import BytesIO
 from pathlib import Path
 from typing import List
 
@@ -133,6 +132,9 @@ class LDaCATabulator:
         cwd = Path.cwd()
         extract_to = cwd / folder_name
         database = cwd / db_name
+        
+        # To save downloaded zip
+        zip_file = cwd / f"{folder_name}.zip"
 
         # Prepare destination
         if extract_to.exists():
@@ -143,10 +145,17 @@ class LDaCATabulator:
             extract_to.mkdir(parents=True, exist_ok=True)
 
             # Download and extract
-            resp = requests.get(zip_url, stream=True)
-            resp.raise_for_status()
-            with zipfile.ZipFile(BytesIO(resp.content)) as zf:
+            with requests.get(zip_url, stream=True) as resp:
+                resp.raise_for_status()
+                with open(zip_file, "wb") as f:
+                    for chunk in resp.iter_content(chunk_size=1e6):
+                        if chunk:
+                            f.write(chunk)
+
+            with zipfile.ZipFile(zip_file, "r") as zf:
                 zf.extractall(extract_to)
+
+            zip_file.unlink()
 
         # Build (or connect) DB
         tb.crate_to_db(str(extract_to), str(database))
