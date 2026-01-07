@@ -288,7 +288,7 @@ class LDaCATabulator:
 
         query = f"SELECT {cols} FROM {table_name}"
         df = pd.read_sql(query, conn)
-        return df
+        return self.drop_id_columns(df)
 
     # ------------------------------------------------------------
     # Class methods
@@ -377,10 +377,8 @@ class LDaCATabulator:
         The cleaned Person table, or ``None`` if the corpus does not contain
         a Person entity.
         """
-        
-        df = self._load_entity_table("Person")
 
-        return self.drop_id_columns(df)
+        return self._load_entity_table("Person")
     
     # get_organization() method
     def get_organization(self):
@@ -394,9 +392,7 @@ class LDaCATabulator:
         contain an Organization entity.
         """
         
-        df = self._load_entity_table("Organization")
-        
-        return self.drop_id_columns(df)
+        return self._load_entity_table("Organization")
     
     # get_speaker() method
     def get_speaker(self):
@@ -410,8 +406,7 @@ class LDaCATabulator:
         a Speaker entity.
         """
         
-        df  = self._load_entity_table("Speaker")
-        return self.drop_id_columns(df)
+        return self._load_entity_table("Speaker")
     
     # -------------------------------------------------------------
     # corpus_specific_tables
@@ -476,7 +471,6 @@ class LDaCATabulator:
     
         self.tb.config = self.load_config(f"{CORPUS_CONFIG_DIR}{match}.json")
         
-        df = self._load_entity_table(table)
-        return self.drop_id_columns(df)
+        return self._load_entity_table(table)
         
 
