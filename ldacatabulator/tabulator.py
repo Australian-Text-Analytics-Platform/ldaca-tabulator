@@ -145,7 +145,7 @@ class LDaCATabulator:
             extract_to.mkdir(parents=True, exist_ok=True)
 
             # Download and extract
-            with requests.get(zip_url, stream=True) as resp:
+            with requests.get(zip_url, stream=True, timeout=20) as resp:
                 resp.raise_for_status()
                 with open(zip_file, "wb") as f:
                     for chunk in resp.iter_content(chunk_size=1e6):
