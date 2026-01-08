@@ -289,80 +289,60 @@ class LDaCATabulator:
         query = f"SELECT {cols} FROM {table_name}"
         df = pd.read_sql(query, conn)
         return self.drop_id_columns(df)
+    
+    # TODO should we include this method. This method add another 
+    # column of speakers, which I am already getting as seperate table
+    def _attach_speakers(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Attach speakers column to RepositoryObject if available."""
+        speaker_junction = "RepositoryObject_ldac:speaker"
 
+        try:
+            with sqlite3.connect(str(self.database)) as conn:
+                junction = pd.read_sql(
+                    f"SELECT * FROM '{speaker_junction}'", conn
+                )
+        except Exception:
+            df["speakers"] = [[] for _ in range(len(df))]
+            return df
+
+        people = self._load_entity_table("Person")
+        if people is None or people.empty:
+            df["speakers"] = [[] for _ in range(len(df))]
+            return df
+
+        speaker_map = (
+            junction.merge(people, on="entity_id", how="left")
+                .groupby("entity_id")["name"]
+                .apply(lambda x: list(x.dropna()))
+                .reset_index()
+                .rename(columns={"name": "speakers"})
+        )
+
+        df = df.merge(speaker_map, on="entity_id", how="left")
+        df["speakers"] = df["speakers"].apply(
+            lambda x: x if isinstance(x, list) else []
+        )
+        return df
+    
     # ------------------------------------------------------------
     # Class methods
     # ------------------------------------------------------------
+
     
     # get_text() method
     def get_text(self):
         """
         Load the RepositoryObject table (a table that contain text) and return it in a cleaned form.
-        If speaker information is available in the corpus, a separate column
-        containing a list of speaker names is added to each record.
 
         Returns
         -------
         pandas.DataFrame
         The cleaned RepositoryObject table.
         """
-
+        
         self.tb.entity_table("RepositoryObject")
 
-        # Load main RepositoryObject table
         df = self._load_table_from_db(str(self.database), "RepositoryObject")
-        
-        # The speaker junction table  <- not sure what this is or why it's
-        # important? May be because I'm not familiar with data format
-        speaker_junction = "RepositoryObject_ldac:speaker"
-        
-        with sqlite3.connect(str(self.database)) as conn:
-            # Check if table exists in the DB
-            tables = pd.read_sql_query(
-                "SELECT name FROM sqlite_master WHERE type='table';",
-                conn
-            )["name"].tolist()
-        
-            if speaker_junction not in tables:
-                return self.drop_id_columns(df)
-            else:
-
-                # Load junction table
-                junction = pd.read_sql_query(
-                    f"SELECT * FROM '{speaker_junction}'", conn
-                )
-
-                # Load Person table
-                people = self._load_entity_table("Person")
-
-                # Merge to attach person names to each observation
-                merged = junction.merge(
-                    people,
-                    left_on="entity_id",
-                    right_on="entity_id",
-                    how="left"
-                )
-
-                # Group speakers by RepositoryObject_id
-                speaker_names = (
-                    merged.groupby("entity_id")["name"]
-                        .apply(lambda x: list(x.dropna()))
-                        .reset_index()
-                        .rename(columns={"name": "speakers"})
-                )
-
-                # Attach speakers list to RepositoryObject table
-                df = df.merge(
-                    speaker_names,
-                    left_on="entity_id",
-                    right_on="entity_id",
-                    how="left"
-                ).drop(columns=["entity_id"], errors="ignore")
-
-                # Fix any NaN speakers to empty lists
-                df["speakers"] = df["speakers"].apply(
-                   lambda x: x if isinstance(x, list) else []
-                )
 
         return self.drop_id_columns(df)
 
