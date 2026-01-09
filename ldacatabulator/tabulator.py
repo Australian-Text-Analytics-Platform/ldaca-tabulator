@@ -254,8 +254,7 @@ class LDaCATabulator:
     
     def _load_entity_table(
         self,
-        table_name: str):#,
-        #columns: List[str] | None = None):
+        table_name: str):
         """
         Load an entity table from the extracted SQLite database.
 
@@ -280,14 +279,7 @@ class LDaCATabulator:
             return None
         
         df = self._load_table_from_db(str(self.database), table_name)
-        #with sqlite3.connect(self.database) as conn:
-        #    if columns:
-        #        cols = ", ".join(f'"{c}"' for c in columns)
-        #    else:
-        #        cols = "*"
-
-        #query = f"SELECT {cols} FROM {table_name}"
-        #df = pd.read_sql(query, conn)
+        
         return self.drop_id_columns(df)
     
     # TODO should we include this method. This method add another 
