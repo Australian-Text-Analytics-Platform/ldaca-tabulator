@@ -283,40 +283,6 @@ class LDaCATabulator:
         
         return self.drop_id_columns(df)
     
-    # TODO should we include this method. This method add another 
-    # column of speakers, which I am already getting as seperate table
-    def _attach_speakers(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Attach speakers column to RepositoryObject if available."""
-        speaker_junction = "RepositoryObject_ldac:speaker"
-
-        try:
-            with sqlite3.connect(str(self.database)) as conn:
-                junction = pd.read_sql(
-                    f"SELECT * FROM '{speaker_junction}'", conn
-                )
-        except Exception:
-            df["speakers"] = [[] for _ in range(len(df))]
-            return df
-
-        people = self._load_entity_table("Person")
-        if people is None or people.empty:
-            df["speakers"] = [[] for _ in range(len(df))]
-            return df
-
-        speaker_map = (
-            junction.merge(people, on="entity_id", how="left")
-                .groupby("entity_id")["name"]
-                .apply(lambda x: list(x.dropna()))
-                .reset_index()
-                .rename(columns={"name": "speakers"})
-        )
-
-        df = df.merge(speaker_map, on="entity_id", how="left")
-        df["speakers"] = df["speakers"].apply(
-            lambda x: x if isinstance(x, list) else []
-        )
-        return df
-    
     # ------------------------------------------------------------
     # Class methods
     # ------------------------------------------------------------
