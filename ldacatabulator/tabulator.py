@@ -7,6 +7,7 @@ import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List
+import logging
 
 # ========== Third-Party Dependencies ==========
 import pandas as pd
@@ -275,7 +276,7 @@ class LDaCATabulator:
         try:
             self.tb.entity_table(table_name)
         except Exception:
-            print(f"No {table_name} table in this corpus.")
+            logging.info("No %s table in this corpus.", table_name)
             return None
         
         df = self._load_table_from_db(str(self.database), table_name)
