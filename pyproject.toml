@@ -1,7 +1,10 @@
 [project]
 name = "ldaca-loader"
 version = "0.1.0"
-description = "Add your description here"
+authors = [
+    { name = "Atiq Ur Rehman", email = "atiqur.rehman@sydney.edu.au" },
+]
+description = "LDaCA-specific interface to Tabulator"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
