@@ -183,41 +183,6 @@ class LDaCATabulator:
             config = json.load(f)
         return config
     
-    # loading table from database
-    def _load_table_from_db(
-        self,
-        database_path: str,
-        table_name: str,
-        columns: List[str] | None = None
-        ):
-        """
-        Load a table from a SQLite database into a pandas DataFrame.
-
-        Parameters
-        ----------
-        database_path : str
-            Path to the SQLite database file.
-        table_name : str
-            Name of the table to load from the database.
-        columns : list[str] | None, optional
-            List of column names to select. If None (default), all columns
-            in the table will be selected.
-
-        Returns
-        -------
-        pandas.DataFrame
-            DataFrame containing the selected table data.
-        """
- 
-        with sqlite3.connect(database_path) as conn:
-            if columns:
-                cols = ", ".join(f'"{c}"' for c in columns)
-            else:
-                cols = "*"
-
-            query = f"SELECT {cols} FROM {table_name}"
-            return pd.read_sql(query, conn)
-    
     @staticmethod
     def drop_id_columns(df):
         """
