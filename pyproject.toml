@@ -1,7 +1,10 @@
 [project]
 name = "ldaca-loader"
 version = "0.1.0"
-description = "Add your description here"
+authors = [
+    { name = "Atiq Ur Rehman", email = "atiqur.rehman@sydney.edu.au" },
+]
+description = "LDaCA-specific interface to Tabulator"
 readme = "README.md"
 license = "MIT"
 [project.license-files]
@@ -12,11 +15,10 @@ dependencies = [
     "jupyter>=1.1.1",
     "notebook>=7.4.7",
     "pandas>=2.3.3",
-    "polar>=0.0.127",
+    "pytest>=9.0.2",
     "pytest-localserver>=0.9.0.post0",
     "requests>=2.32.5",
     "rocrate-tabular",
-    "tqdm>=4.67.1",
 ]
 
 

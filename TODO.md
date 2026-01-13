@@ -1,0 +1,2 @@
+- Edit this file of what are the issues with the package and what need to done in the future.
+-  Give direction of how this package is working. This explanation should explain the codes, for example, class, methods etc.
