@@ -255,7 +255,9 @@ class LDaCATabulator:
     
     def _load_entity_table(
         self,
-        table_name: str):
+        table_name: str,
+        columns: List[str] | None = None
+        ):
         """
         Load an entity table from the extracted SQLite database.
 
@@ -279,7 +281,17 @@ class LDaCATabulator:
             logging.info("No %s table in this corpus.", table_name)
             return None
         
-        df = self._load_table_from_db(str(self.database), table_name)
+        #df = self._load_table_from_db(str(self.database), table_name)
+        
+        with sqlite3.connect(self.database) as conn:
+            if columns:
+                cols = ", ".join(f'"{c}"' for c in columns)
+            else:
+                cols = "*"
+
+            query = f"SELECT {cols} FROM {table_name}"
+            #return pd.read_sql(query, conn)
+            df = pd.read_sql(query, conn)
         
         return self.drop_id_columns(df)
     
@@ -299,9 +311,10 @@ class LDaCATabulator:
         The cleaned RepositoryObject table.
         """
         
-        self.tb.entity_table("RepositoryObject")
+        #self.tb.entity_table("RepositoryObject")
 
-        df = self._load_table_from_db(str(self.database), "RepositoryObject")
+        #df = self._load_table_from_db(str(self.database), "RepositoryObject")
+        df = self._load_entity_table("RepositoryObject")
 
         return self.drop_id_columns(df)
 
