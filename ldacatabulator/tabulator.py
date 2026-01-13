@@ -246,8 +246,6 @@ class LDaCATabulator:
             logging.info("No %s table in this corpus.", table_name)
             return None
         
-        #df = self._load_table_from_db(str(self.database), table_name)
-        
         with sqlite3.connect(self.database) as conn:
             if columns:
                 cols = ", ".join(f'"{c}"' for c in columns)
@@ -276,9 +274,6 @@ class LDaCATabulator:
         The cleaned RepositoryObject table.
         """
         
-        #self.tb.entity_table("RepositoryObject")
-
-        #df = self._load_table_from_db(str(self.database), "RepositoryObject")
         df = self._load_entity_table("RepositoryObject")
 
         return self.drop_id_columns(df)
