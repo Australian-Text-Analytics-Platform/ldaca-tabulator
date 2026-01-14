@@ -309,9 +309,7 @@ class LDaCATabulator:
         
         df = self._load_entity_table("RepositoryObject")
         
-        if full_df:
-            df = df 
-        else:
+        if not full_df:
             df = self.drop_high_null_columns(df)
             
         return self.drop_id_columns(df)
