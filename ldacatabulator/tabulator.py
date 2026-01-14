@@ -149,7 +149,7 @@ class LDaCATabulator:
             with requests.get(zip_url, stream=True, timeout=20) as resp:
                 resp.raise_for_status()
                 with open(zip_file, "wb") as f:
-                    for chunk in resp.iter_content(chunk_size=1e6):
+                    for chunk in resp.iter_content(chunk_size=1024*1024):
                         if chunk:
                             f.write(chunk)
 
@@ -240,6 +240,8 @@ class LDaCATabulator:
             The loaded and cleaned table, or ``None`` if the table is not
             present in the corpus.
         """
+        #TODO get_speaker() is giving an error when not in the corpus
+        # The reason is logging. 
         try:
             self.tb.entity_table(table_name)
         except Exception:
