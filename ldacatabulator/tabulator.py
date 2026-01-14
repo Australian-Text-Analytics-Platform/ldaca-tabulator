@@ -6,7 +6,7 @@ import sqlite3
 import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 import logging
 
 # ========== Third-Party Dependencies ==========
@@ -259,6 +259,36 @@ class LDaCATabulator:
             df = pd.read_sql(query, conn)
         
         return self.drop_id_columns(df)
+
+    @staticmethod
+    def drop_high_null_columns(
+        df: pd.DataFrame
+        ) -> pd.DataFrame: 
+        
+        """
+        Drop columns whose proportion of missing values exceeds a threshold of 0.99.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Input DataFrame.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame with high-null columns removed.
+        """
+        MAX_NULL_PROP = 0.99
+        if not 0 <= MAX_NULL_PROP <= 1:
+            raise ValueError("max_null_prop must be between 0 and 1")
+
+        null_prop = df.isna().mean()
+        keep_mask = null_prop <= MAX_NULL_PROP
+
+        df_filtered = df.loc[:, keep_mask]
+
+        return df_filtered
+
     
     # ------------------------------------------------------------
     # Class methods
@@ -266,7 +296,8 @@ class LDaCATabulator:
 
     
     # get_text() method
-    def get_text(self):
+    def get_text(self, full_df: bool = False):
+        
         """
         Load the RepositoryObject table (a table that contain text) and return it in a cleaned form.
 
@@ -277,7 +308,12 @@ class LDaCATabulator:
         """
         
         df = self._load_entity_table("RepositoryObject")
-
+        
+        if full_df:
+            df = df 
+        else:
+            df = self.drop_high_null_columns(df)
+            
         return self.drop_id_columns(df)
 
     # get_people() method
