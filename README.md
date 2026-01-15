@@ -37,7 +37,7 @@ After installation, you can load an LDaCA corpus and access its tables using `LD
 ### Load a corpus
 
 ```python
-from ldacatabulator.tabulator import LDaCATabulator
+from src.ldacatabulator.tabulator import LDaCATabulator
 
 zip_url = (
     "https://data.ldaca.edu.au/api/object/arcp%3A%2F%2Fname%2Chdl10.26180~23961609.zip"

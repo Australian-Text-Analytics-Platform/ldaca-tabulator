@@ -7,7 +7,6 @@ import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List
-import logging
 
 # ========== Third-Party Dependencies ==========
 import pandas as pd
@@ -149,7 +148,7 @@ class LDaCATabulator:
             with requests.get(zip_url, stream=True, timeout=20) as resp:
                 resp.raise_for_status()
                 with open(zip_file, "wb") as f:
-                    for chunk in resp.iter_content(chunk_size=1e6):
+                    for chunk in resp.iter_content(chunk_size=1024*1024):
                         if chunk:
                             f.write(chunk)
 
@@ -240,10 +239,12 @@ class LDaCATabulator:
             The loaded and cleaned table, or ``None`` if the table is not
             present in the corpus.
         """
+        #TODO get_speaker() is giving an error when not in the corpus
+        # The reason is logging. 
         try:
             self.tb.entity_table(table_name)
         except Exception:
-            logging.info("No %s table in this corpus.", table_name)
+            print("No %s table in this corpus.", table_name)
             return None
         
         with sqlite3.connect(self.database) as conn:
@@ -257,6 +258,36 @@ class LDaCATabulator:
             df = pd.read_sql(query, conn)
         
         return self.drop_id_columns(df)
+
+    @staticmethod
+    def drop_high_null_columns(
+        df: pd.DataFrame
+        ) -> pd.DataFrame: 
+        
+        """
+        Drop columns whose proportion of missing values exceeds a threshold of 0.99.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Input DataFrame.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame with high-null columns removed.
+        """
+        MAX_NULL_PROP = 0.99
+        if not 0 <= MAX_NULL_PROP <= 1:
+            raise ValueError("max_null_prop must be between 0 and 1")
+
+        null_prop = df.isna().mean()
+        keep_mask = null_prop <= MAX_NULL_PROP
+
+        df_filtered = df.loc[:, keep_mask]
+
+        return df_filtered
+
     
     # ------------------------------------------------------------
     # Class methods
@@ -264,7 +295,8 @@ class LDaCATabulator:
 
     
     # get_text() method
-    def get_text(self):
+    def get_text(self, full_df: bool = False):
+        
         """
         Load the RepositoryObject table (a table that contain text) and return it in a cleaned form.
 
@@ -275,11 +307,14 @@ class LDaCATabulator:
         """
         
         df = self._load_entity_table("RepositoryObject")
-
+        
+        if not full_df:
+            df = self.drop_high_null_columns(df)
+            
         return self.drop_id_columns(df)
 
     # get_people() method
-    def get_people(self):
+    def get_people(self, full_df: bool = False):
         """
         Load and return the Person table from the corpus in a cleaned form.
 
@@ -289,11 +324,16 @@ class LDaCATabulator:
         The cleaned Person table, or ``None`` if the corpus does not contain
         a Person entity.
         """
+        
+        df = self._load_entity_table("Person")
+        
+        if not full_df:
+            df = self.drop_high_null_columns(df)       
 
-        return self._load_entity_table("Person")
+        return df
     
     # get_organization() method
-    def get_organization(self):
+    def get_organization(self, full_df: bool = False):
         """
         Load and return the Organization table from the corpus in a cleaned form.
 
@@ -303,11 +343,15 @@ class LDaCATabulator:
         The cleaned Organization table, or ``None`` if the corpus does not
         contain an Organization entity.
         """
+        df = self._load_entity_table("Organization")
         
-        return self._load_entity_table("Organization")
+        if not full_df:
+            df = self.drop_high_null_columns(df)       
+
+        return df
     
     # get_speaker() method
-    def get_speaker(self):
+    def get_speaker(self, full_df: bool = False):
         """
         Load and return the Speaker table from the corpus in a cleaned form.
 
@@ -317,8 +361,12 @@ class LDaCATabulator:
         The cleaned Speaker table, or ``None`` if the corpus does not contain
         a Speaker entity.
         """
+        df = self._load_entity_table("Speaker")
         
-        return self._load_entity_table("Speaker")
+        if not full_df:
+            df = self.drop_high_null_columns(df)      
+        
+        return df
     
     # -------------------------------------------------------------
     # corpus_specific_tables
