@@ -6,8 +6,7 @@ import sqlite3
 import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Tuple
-import logging
+from typing import List
 
 # ========== Third-Party Dependencies ==========
 import pandas as pd
@@ -245,7 +244,7 @@ class LDaCATabulator:
         try:
             self.tb.entity_table(table_name)
         except Exception:
-            logging.info("No %s table in this corpus.", table_name)
+            print("No %s table in this corpus.", table_name)
             return None
         
         with sqlite3.connect(self.database) as conn:
