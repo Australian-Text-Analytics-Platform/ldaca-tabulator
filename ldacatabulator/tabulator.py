@@ -315,7 +315,7 @@ class LDaCATabulator:
         return self.drop_id_columns(df)
 
     # get_people() method
-    def get_people(self):
+    def get_people(self, full_df: bool = False):
         """
         Load and return the Person table from the corpus in a cleaned form.
 
@@ -325,11 +325,16 @@ class LDaCATabulator:
         The cleaned Person table, or ``None`` if the corpus does not contain
         a Person entity.
         """
+        
+        df = self._load_entity_table("Person")
+        
+        if not full_df:
+            df = self.drop_high_null_columns(df)       
 
-        return self._load_entity_table("Person")
+        return df
     
     # get_organization() method
-    def get_organization(self):
+    def get_organization(self, full_df: bool = False):
         """
         Load and return the Organization table from the corpus in a cleaned form.
 
@@ -339,11 +344,15 @@ class LDaCATabulator:
         The cleaned Organization table, or ``None`` if the corpus does not
         contain an Organization entity.
         """
+        df = self._load_entity_table("Organization")
         
-        return self._load_entity_table("Organization")
+        if not full_df:
+            df = self.drop_high_null_columns(df)       
+
+        return df
     
     # get_speaker() method
-    def get_speaker(self):
+    def get_speaker(self, full_df: bool = False):
         """
         Load and return the Speaker table from the corpus in a cleaned form.
 
@@ -353,8 +362,12 @@ class LDaCATabulator:
         The cleaned Speaker table, or ``None`` if the corpus does not contain
         a Speaker entity.
         """
+        df = self._load_entity_table("Speaker")
         
-        return self._load_entity_table("Speaker")
+        if not full_df:
+            df = self.drop_high_null_columns(df)      
+        
+        return df
     
     # -------------------------------------------------------------
     # corpus_specific_tables
