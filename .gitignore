@@ -33,5 +33,5 @@ tests/crates/languageFamily/languageFamily.db
 corpus_test/
 
 # ignore src folder
-src/__pycache__
+src/ldacatabulator/__pycache__
 
