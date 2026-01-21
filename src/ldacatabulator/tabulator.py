@@ -239,8 +239,7 @@ class LDaCATabulator:
             The loaded and cleaned table, or ``None`` if the table is not
             present in the corpus.
         """
-        #TODO get_speaker() is giving an error when not in the corpus
-        # The reason is logging. 
+        
         try:
             self.tb.entity_table(table_name)
         except Exception:
