@@ -1,0 +1,1 @@
+::: src.ldacatabulator.tabulator.LDaCATabulator.get_text
