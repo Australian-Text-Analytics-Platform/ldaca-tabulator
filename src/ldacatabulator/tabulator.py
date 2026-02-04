@@ -21,6 +21,7 @@ from rocrate_tabular.tabulator import ROCrateTabulator
 # -------------------------
 TEXT_PROP = "ldac:mainText"
 
+
 # -------------------------------------------------------------
 # Class responsible for loading, unpacking, and processing
 # LDaCA RO-Crate corpora into clean, analysis-ready tables.
@@ -56,31 +57,31 @@ class LDaCATabulator:
     text_prop: str = TEXT_PROP
     tb: ROCrateTabulator = field(default_factory=ROCrateTabulator)
 
-    
     def __post_init__(self):
-        
+
         # Download and unzip
-        self.database, self.extract_to = self._unzip_corpus(
-        self.url,
-        tb=self.tb
-        )
-        
-        self.tb.config = self._load_package_config(["configs", "general", "general-config.json"])
-        
+        self.database, self.extract_to = self._unzip_corpus(self.url, tb=self.tb)
+
+        self.tb.config = self._load_package_config([
+            "configs",
+            "general",
+            "general-config.json",
+        ])
+
         self.tb.text_prop = self.text_prop
-        
+
     # -----------------------------------------------
     # Helper methods
     # -----------------------------------------------
-    
+
     def _unzip_corpus(
         self,
         zip_url: str,
         tb: ROCrateTabulator,
         folder_name: str | None = None,
         db_name: str | None = None,
-        overwrite: bool = False, #HACK If already exist, it may give error or use the same corpus. Use default True
-        ):
+        overwrite: bool = False,  # HACK If already exist, it may give error or use the same corpus. Use default True
+    ):
         """
         Download, extract, and tabulate an RO-Crate corpus into a database.
 
@@ -131,7 +132,7 @@ class LDaCATabulator:
         cwd = Path.cwd()
         extract_to = cwd / folder_name
         database = cwd / db_name
-        
+
         # To save downloaded zip
         zip_file = cwd / f"{folder_name}.zip"
 
@@ -147,7 +148,7 @@ class LDaCATabulator:
             with requests.get(zip_url, stream=True, timeout=20) as resp:
                 resp.raise_for_status()
                 with open(zip_file, "wb") as f:
-                    for chunk in resp.iter_content(chunk_size=1024*1024):
+                    for chunk in resp.iter_content(chunk_size=1024 * 1024):
                         if chunk:
                             f.write(chunk)
 
@@ -159,8 +160,7 @@ class LDaCATabulator:
         # Build (or connect) DB
         tb.crate_to_db(str(extract_to), str(database))
         return database, extract_to
-    
-    
+
     # loading config file
     @staticmethod
     def _load_package_config(path_parts: List[str]):
@@ -170,7 +170,7 @@ class LDaCATabulator:
         config_path = importlib.resources.files("ldacatabulator")
         for part in path_parts:
             config_path = config_path.joinpath(part)
-            
+
         with config_path.open("r", encoding="utf-8") as f:
             return json.load(f)
 
@@ -192,16 +192,16 @@ class LDaCATabulator:
         with open(config_path) as f:
             config = json.load(f)
         return config
-    
+
     @staticmethod
     def drop_id_columns(df):
         """
         Remove identifier-like columns from a pandas DataFrame.
 
         This function drops any column whose name contains the substring "_id".
-        It is a general-purpose utility for removing ID or foreign-key columns 
-        that are typically not useful for end-user analysis. 
-    
+        It is a general-purpose utility for removing ID or foreign-key columns
+        that are typically not useful for end-user analysis.
+
         Examples of columns removed:
             - "author_id"
             - "conformsTo_id"
@@ -209,8 +209,8 @@ class LDaCATabulator:
             - "author_id_1"
             - "ldac:speaker_id"
 
-        The match is substring-based, so any column name containing "_id" 
-        anywhere will be removed. Use with caution if your dataset includes 
+        The match is substring-based, so any column name containing "_id"
+        anywhere will be removed. Use with caution if your dataset includes
         non-identifier fields that also contain "_id" in their names.
 
         Parameters
@@ -221,18 +221,13 @@ class LDaCATabulator:
         Returns
         -------
         pandas.DataFrame
-            A new DataFrame with all "_id" columns dropped. Columns that do not 
+            A new DataFrame with all "_id" columns dropped. Columns that do not
             exist are ignored safely.
         """
         cols_to_drop = [c for c in df.columns if "_id" in c]
         return df.drop(columns=cols_to_drop, errors="ignore")
 
-    
-    def _load_entity_table(
-        self,
-        table_name: str,
-        columns: List[str] | None = None
-        ):
+    def _load_entity_table(self, table_name: str, columns: List[str] | None = None):
         """
         Load an entity table from the extracted SQLite database.
 
@@ -250,14 +245,14 @@ class LDaCATabulator:
             The loaded and cleaned table, or ``None`` if the table is not
             present in the corpus.
         """
-        #TODO get_speaker() is giving an error when not in the corpus
-        # The reason is logging. 
+        # TODO get_speaker() is giving an error when not in the corpus
+        # The reason is logging.
         try:
             self.tb.entity_table(table_name)
         except Exception:
             print("No %s table in this corpus.", table_name)
             return None
-        
+
         with sqlite3.connect(self.database) as conn:
             if columns:
                 cols = ", ".join(f'"{c}"' for c in columns)
@@ -265,16 +260,13 @@ class LDaCATabulator:
                 cols = "*"
 
             query = f"SELECT {cols} FROM {table_name}"
-            #return pd.read_sql(query, conn)
+            # return pd.read_sql(query, conn)
             df = pd.read_sql(query, conn)
-        
+
         return self.drop_id_columns(df)
 
     @staticmethod
-    def drop_high_null_columns(
-        df: pd.DataFrame
-        ) -> pd.DataFrame: 
-        
+    def drop_high_null_columns(df: pd.DataFrame) -> pd.DataFrame:
         """
         Drop columns whose proportion of missing values exceeds a threshold of 0.99.
 
@@ -299,15 +291,12 @@ class LDaCATabulator:
 
         return df_filtered
 
-    
     # ------------------------------------------------------------
     # Class methods
     # ------------------------------------------------------------
 
-    
     # get_text() method
     def get_text(self, full_df: bool = False):
-        
         """
         Load the RepositoryObject table (a table that contain text) and return it in a cleaned form.
 
@@ -316,12 +305,12 @@ class LDaCATabulator:
         pandas.DataFrame
         The cleaned RepositoryObject table.
         """
-        
+
         df = self._load_entity_table("RepositoryObject")
-        
+
         if not full_df:
             df = self.drop_high_null_columns(df)
-            
+
         return self.drop_id_columns(df)
 
     # get_people() method
@@ -335,14 +324,14 @@ class LDaCATabulator:
         The cleaned Person table, or ``None`` if the corpus does not contain
         a Person entity.
         """
-        
+
         df = self._load_entity_table("Person")
-        
+
         if not full_df:
-            df = self.drop_high_null_columns(df)       
+            df = self.drop_high_null_columns(df)
 
         return df
-    
+
     # get_organization() method
     def get_organization(self, full_df: bool = False):
         """
@@ -355,12 +344,12 @@ class LDaCATabulator:
         contain an Organization entity.
         """
         df = self._load_entity_table("Organization")
-        
+
         if not full_df:
-            df = self.drop_high_null_columns(df)       
+            df = self.drop_high_null_columns(df)
 
         return df
-    
+
     # get_speaker() method
     def get_speaker(self, full_df: bool = False):
         """
@@ -373,12 +362,12 @@ class LDaCATabulator:
         a Speaker entity.
         """
         df = self._load_entity_table("Speaker")
-        
+
         if not full_df:
-            df = self.drop_high_null_columns(df)      
-        
+            df = self.drop_high_null_columns(df)
+
         return df
-    
+
     # -------------------------------------------------------------
     # corpus_specific_tables
     # -------------------------------------------------------------
@@ -387,7 +376,7 @@ class LDaCATabulator:
         Return a list of corpus-specific tables defined in this corpus' config file.
 
         This method extracts the numeric corpus identifier from the corpus URL,
-        loads the corresponding configuration file, and returns the names of the 
+        loads the corresponding configuration file, and returns the names of the
         tables that are specific to that corpus.
 
         Returns
@@ -397,7 +386,7 @@ class LDaCATabulator:
             user to call ``corpus_specific_tables(table_name)`` to load the data.
         """
         # Extract corpus ID from the URL (digits after "~" and before ".")
-        match = re.search(r'~(\d+)\.', self.url)
+        match = re.search(r"~(\d+)\.", self.url)
         if not match:
             return "Could not extract corpus ID from URL. Cannot load config."
         corpus_id = match.group(1)
@@ -414,7 +403,6 @@ class LDaCATabulator:
             f"Use corpus_specific_tables(table_name) to load the data."
         )
 
-      
     def corpus_specific_tables(self, table: str):
         """
         Load and return a cleaned corpus-specific table.
@@ -437,11 +425,13 @@ class LDaCATabulator:
         pandas.DataFrame
             The cleaned DataFrame for the requested table.
         """
-        
-        match = re.search(r'~(\d+)\.', self.url).group(1)
-    
-        self.tb.config = self._load_package_config(["configs", "corpora", f"{match}.json"])
-        
-        return self._load_entity_table(table)
-        
 
+        match = re.search(r"~(\d+)\.", self.url).group(1)
+
+        self.tb.config = self._load_package_config([
+            "configs",
+            "corpora",
+            f"{match}.json",
+        ])
+
+        return self._load_entity_table(table)
