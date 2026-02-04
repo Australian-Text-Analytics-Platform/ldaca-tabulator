@@ -1,0 +1,6 @@
+dataclasses>=0.8
+jupyter>=1.1.1
+notebook>=7.4.7
+pandas>=2.3.3
+requests>=2.32.5
+rocrate-tabular

@@ -1,0 +1,11 @@
+LICENSE.txt
+README.md
+pyproject.toml
+src/ldaca_loader.egg-info/PKG-INFO
+src/ldaca_loader.egg-info/SOURCES.txt
+src/ldaca_loader.egg-info/dependency_links.txt
+src/ldaca_loader.egg-info/requires.txt
+src/ldaca_loader.egg-info/top_level.txt
+src/ldacatabulator/__init__.py
+src/ldacatabulator/tabulator.py
+tests/test_LDaCATabulator.py

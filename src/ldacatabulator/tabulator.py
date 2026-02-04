@@ -1,4 +1,5 @@
 # ========== Python Standard Library ==========
+import importlib.resources
 import json
 import re
 import shutil
@@ -18,8 +19,6 @@ from rocrate_tabular.tabulator import ROCrateTabulator
 # -------------------------
 # Constants
 # -------------------------
-GENERAL_CONFIG = "./configs/general/general-config.json"
-CORPUS_CONFIG_DIR = "./configs/corpora/"
 TEXT_PROP = "ldac:mainText"
 
 # -------------------------------------------------------------
@@ -66,7 +65,7 @@ class LDaCATabulator:
         tb=self.tb
         )
         
-        self.tb.config = self.load_config(GENERAL_CONFIG)
+        self.tb.config = self._load_package_config(["configs", "general", "general-config.json"])
         
         self.tb.text_prop = self.text_prop
         
@@ -163,6 +162,18 @@ class LDaCATabulator:
     
     
     # loading config file
+    @staticmethod
+    def _load_package_config(path_parts: List[str]):
+        """
+        Load configuration from the package resources.
+        """
+        config_path = importlib.resources.files("ldacatabulator")
+        for part in path_parts:
+            config_path = config_path.joinpath(part)
+            
+        with config_path.open("r", encoding="utf-8") as f:
+            return json.load(f)
+
     @staticmethod
     def load_config(config_path: str):
         """
@@ -393,7 +404,7 @@ class LDaCATabulator:
 
         # Load the specific corpus config file
         # Adjust this path depending on how your configs are stored
-        config = self.load_config(f"{CORPUS_CONFIG_DIR}{corpus_id}.json")
+        config = self._load_package_config(["configs", "corpora", f"{corpus_id}.json"])
 
         # Extract table names from the loaded config
         tables = list(config.get("tables", {}).keys())
@@ -429,7 +440,7 @@ class LDaCATabulator:
         
         match = re.search(r'~(\d+)\.', self.url).group(1)
     
-        self.tb.config = self.load_config(f"{CORPUS_CONFIG_DIR}{match}.json")
+        self.tb.config = self._load_package_config(["configs", "corpora", f"{match}.json"])
         
         return self._load_entity_table(table)
         
