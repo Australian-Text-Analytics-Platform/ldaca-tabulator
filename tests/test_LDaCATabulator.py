@@ -3,7 +3,6 @@ import pandas as pd
 from rocrate_tabular.tabulator import ROCrateTabulator
 from pathlib import Path
 from unittest.mock import patch, MagicMock
-from tempfile import mkdtemp
 import sqlite3
 import pytest
 
