@@ -60,6 +60,7 @@ var/
 wheels/
 share/python-wheels/
 *.egg-info/
+src/*.egg-info/
 .installed.cfg
 *.egg
 MANIFEST
@@ -252,3 +253,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Additional common Python tooling files
+.env.*
+.idea/
+pip-wheel-metadata/

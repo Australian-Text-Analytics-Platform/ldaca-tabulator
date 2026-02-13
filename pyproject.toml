@@ -10,9 +10,6 @@ license = "MIT"
 license-files = ["LICENSE.txt"]
 requires-python = ">=3.12"
 dependencies = [
-  "dataclasses>=0.8",
-  "jupyter>=1.1.1",
-  "notebook>=7.4.7",
   "pandas>=2.3.3",
   "requests>=2.32.5",
   "rocrate-tabular",
@@ -23,6 +20,8 @@ rocrate-tabular = { git = "https://github.com/Sydney-Informatics-Hub/rocrate-tab
 
 [dependency-groups]
 dev = [
+  "jupyter>=1.1.1",
+  "notebook>=7.4.7",
     "pytest>=9.0.2",
     "pytest-localserver>=0.10.0",
 ]
