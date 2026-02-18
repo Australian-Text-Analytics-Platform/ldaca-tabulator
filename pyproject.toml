@@ -1,3 +1,7 @@
+[build-system]
+requires = ["uv_build>=0.10.4,<0.11.0"]
+build-backend = "uv_build"
+
 [project]
 name = "ldaca-loader"
 version = "0.1.0"
@@ -25,3 +29,15 @@ dev = [
     "pytest>=9.0.2",
     "pytest-localserver>=0.10.0",
 ]
+
+[tool.uv.build-backend]
+module-name = "ldacatabulator"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+ldacatabulator = ["configs/**/*.json"]
