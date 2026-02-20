@@ -80,7 +80,7 @@ class LDaCATabulator:
         tb: ROCrateTabulator,
         folder_name: str | None = None,
         db_name: str | None = None,
-        overwrite: bool = False, #HACK If already exist, it may give error or use the same corpus. Use default True
+        overwrite: bool = True, #HACK If already exist, it may give error or use the same corpus. Use default True
         ):
         """
         Download, extract, and tabulate an RO-Crate corpus into a database.

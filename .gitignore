@@ -35,3 +35,5 @@ corpus_test/
 # ignore src folder
 src/ldacatabulator/__pycache__
 
+# Ruff cache
+.ruff_cache 
