@@ -846,7 +846,7 @@ requires-dist = [
     { name = "notebook", specifier = ">=7.4.7" },
     { name = "pandas", specifier = ">=2.3.3" },
     { name = "requests", specifier = ">=2.32.5" },
-    { name = "rocrate-tabular", git = "https://github.com/Sydney-Informatics-Hub/rocrate-tabular.git" },
+    { name = "rocrate-tabular", git = "https://github.com/Sydney-Informatics-Hub/rocrate-tabular.git?rev=main" },
 ]
 
 [package.metadata.requires-dev]
@@ -1496,7 +1496,7 @@ wheels = [
 [[package]]
 name = "rocrate-tabular"
 version = "0.1.4"
-source = { git = "https://github.com/Sydney-Informatics-Hub/rocrate-tabular.git#1e7af0541addd086d2ac47b58b77917fe52a607e" }
+source = { git = "https://github.com/Sydney-Informatics-Hub/rocrate-tabular.git?rev=main#6a671d5e4577c6e1d4e6d0fe89363d4f56656488" }
 dependencies = [
     { name = "requests" },
     { name = "sqlite-utils" },

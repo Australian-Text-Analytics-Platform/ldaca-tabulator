@@ -136,26 +136,25 @@ class LDaCATabulator:
         # To save downloaded zip
         zip_file = cwd / f"{folder_name}.zip"
 
-        # Prepare destination
-        if extract_to.exists():
-            if overwrite:
-                shutil.rmtree(extract_to)
-                extract_to.mkdir(parents=True, exist_ok=True)
-        else:
-            extract_to.mkdir(parents=True, exist_ok=True)
+        # Destination
+        if extract_to.exists() and overwrite:
+            shutil.rmtree(extract_to)
 
-            # Download and extract
+        extract_to.mkdir(parents=True, exist_ok=True)
+
+        # Download/extract if this is first time OR overwrite=True
+        if overwrite or (not extract_to.exists()):
             with requests.get(zip_url, stream=True, timeout=20) as resp:
                 resp.raise_for_status()
                 with open(zip_file, "wb") as f:
-                    for chunk in resp.iter_content(chunk_size=1024*1024):
+                    for chunk in resp.iter_content(chunk_size=1024 * 1024):
                         if chunk:
                             f.write(chunk)
 
             with zipfile.ZipFile(zip_file, "r") as zf:
                 zf.extractall(extract_to)
 
-            zip_file.unlink()
+            zip_file.unlink(missing_ok=True)
 
         # Build (or connect) DB
         tb.crate_to_db(str(extract_to), str(database))
