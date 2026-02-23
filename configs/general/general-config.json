@@ -69,6 +69,39 @@
                 "entity_id",
                 "@type"
             ]
-        }
+        },
+        "RepositoryCollection": {
+    "all_props": [],
+    "expand_props": [],
+    "ignore_props": [
+      "entity_id",
+      "@type",
+      "@type_1",
+      "temporalCoverage",
+      "author_id",
+      "dct:rightsHolder",
+      "dct:rightsHolder_id",
+      "accountablePerson",
+      "accountablePerson_id",
+      "publisher",
+      "publisher_id",
+      "citation",
+      "citation_id",
+      "datePublished",
+      "license",
+      "license_id",
+      "ldac:doi",
+      "ldac:hasCollectionProtocol",
+      "ldac:hasCollectionProtocol_id",
+      "isBasedOn",
+      "isBasedOn_id",
+      "conformsTo",
+      "conformsTo_id",
+      "inLanguage",
+      "inLanguage_id",
+      "ldac:subjectLanguage",
+      "ldac:subjectLanguage_id"
+    ]
+  }
     }
 }

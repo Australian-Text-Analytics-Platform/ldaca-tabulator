@@ -18,7 +18,7 @@ from rocrate_tabular.tabulator import ROCrateTabulator
 # -------------------------
 # Constants
 # -------------------------
-GENERAL_CONFIG = "./configs/general/general-config.json"
+GENERAL_CONFIG = "./configs/general"
 CORPUS_CONFIG_DIR = "./configs/corpora/"
 TEXT_PROP = "ldac:mainText"
 
@@ -60,13 +60,12 @@ class LDaCATabulator:
     
     def __post_init__(self):
         
-        # Download and unzip
         self.database, self.extract_to = self._unzip_corpus(
         self.url,
         tb=self.tb
         )
         
-        self.tb.config = self.load_config(GENERAL_CONFIG)
+        self.tb.config = self.load_config(GENERAL_CONFIG + "/general-config.json")
         
         self.tb.text_prop = self.text_prop
         
@@ -74,13 +73,14 @@ class LDaCATabulator:
     # Helper methods
     # -----------------------------------------------
     
+    # Download and unzip
     def _unzip_corpus(
         self,
         zip_url: str,
         tb: ROCrateTabulator,
         folder_name: str | None = None,
         db_name: str | None = None,
-        overwrite: bool = True, #HACK If already exist, it may give error or use the same corpus. Use default True
+        overwrite: bool = False, #HACK If already exist, it may give error or use the same corpus. Use default True
         ):
         """
         Download, extract, and tabulate an RO-Crate corpus into a database.
@@ -431,5 +431,14 @@ class LDaCATabulator:
         self.tb.config = self.load_config(f"{CORPUS_CONFIG_DIR}{match}.json")
         
         return self._load_entity_table(table)
+    
+    def get_collection_name(self):
+        
+        #self.tb.config = self.load_config(GENERAL_CONFIG + "/RepositoryCollection.json")
+        
+        df = self._load_entity_table("RepositoryCollection")
+        
+        return f"Name of Corpus: {df["name"]}"
+        
         
 
