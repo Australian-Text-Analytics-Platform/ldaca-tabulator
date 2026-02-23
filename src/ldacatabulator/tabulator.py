@@ -439,6 +439,9 @@ class LDaCATabulator:
         df = self._load_entity_table("RepositoryCollection")
         
         return f"Name of Corpus: {df["name"]}"
+    
+    def get_description(self):
+        pass
         
         
 
