@@ -11,7 +11,7 @@ from typing import List
 # ========== Third-Party Dependencies ==========
 import pandas as pd
 import requests
-import BeautifulSoup4
+from bs4 import BeautifulSoup
 
 # ========== Project-Specific Imports ==========
 from rocrate_tabular.tabulator import ROCrateTabulator
@@ -22,6 +22,8 @@ from rocrate_tabular.tabulator import ROCrateTabulator
 GENERAL_CONFIG = "./configs/general/general-config.json"
 CORPUS_CONFIG_DIR = "./configs/corpora/"
 TEXT_PROP = "ldac:mainText"
+# path to ro-crate-preview.html
+HTML_PATH = Path("rocrate/ro-crate-preview.html")
 
 # -------------------------------------------------------------
 # Class responsible for loading, unpacking, and processing
@@ -434,6 +436,7 @@ class LDaCATabulator:
         return self._load_entity_table(table)
     
     def corpus_info(self):
+        
         pass
         
 
