@@ -11,6 +11,7 @@ from typing import List
 # ========== Third-Party Dependencies ==========
 import pandas as pd
 import requests
+import BeautifulSoup4
 
 # ========== Project-Specific Imports ==========
 from rocrate_tabular.tabulator import ROCrateTabulator
@@ -18,7 +19,7 @@ from rocrate_tabular.tabulator import ROCrateTabulator
 # -------------------------
 # Constants
 # -------------------------
-GENERAL_CONFIG = "./configs/general"
+GENERAL_CONFIG = "./configs/general/general-config.json"
 CORPUS_CONFIG_DIR = "./configs/corpora/"
 TEXT_PROP = "ldac:mainText"
 
@@ -65,7 +66,7 @@ class LDaCATabulator:
         tb=self.tb
         )
         
-        self.tb.config = self.load_config(GENERAL_CONFIG + "/general-config.json")
+        self.tb.config = self.load_config(GENERAL_CONFIG)
         
         self.tb.text_prop = self.text_prop
         
@@ -432,11 +433,7 @@ class LDaCATabulator:
         
         return self._load_entity_table(table)
     
-    def get_collection_name(self):
+    def corpus_info(self):
         pass
-    
-    def get_description(self):
-        pass
-        
         
 
