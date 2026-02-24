@@ -433,12 +433,7 @@ class LDaCATabulator:
         return self._load_entity_table(table)
     
     def get_collection_name(self):
-        
-        #self.tb.config = self.load_config(GENERAL_CONFIG + "/RepositoryCollection.json")
-        
-        df = self._load_entity_table("RepositoryCollection")
-        
-        return f"Name of Corpus: {df["name"]}"
+        pass
     
     def get_description(self):
         pass
