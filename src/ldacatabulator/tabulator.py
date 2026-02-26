@@ -463,12 +463,16 @@ class LDaCATabulator:
 
         corpus_name = corpus_node.get("name")
         corpus_description = corpus_node.get("description")
+        date_published = corpus_node.get("datePublished")
 
         markdown_content = f"""## Name: 
         {corpus_name}
         
         ## Description: 
         {corpus_description}
+        
+        ## Date Published
+        {date_published}
         """
 
         return markdown_content
