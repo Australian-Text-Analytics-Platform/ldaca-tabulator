@@ -487,6 +487,7 @@ class LDaCATabulator:
         """
 
         return markdown_content
+    
         
         
 
