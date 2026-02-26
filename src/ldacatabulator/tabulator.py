@@ -7,6 +7,11 @@ import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List
+from urllib.parse import (
+    unquote,
+    urlparse
+    )
+
 
 # ========== Third-Party Dependencies ==========
 import pandas as pd
@@ -435,8 +440,38 @@ class LDaCATabulator:
         
         return self._load_entity_table(table)
     
-    def corpus_info(self):
+    def get_corpus_info(self):
+        # Extract corpus ID from URL
+        parsed_url = urlparse(self.url)
+        encoded_name = Path(parsed_url.path).name
+        encoded_name = encoded_name.removesuffix(".zip")
+        corpus_id = unquote(encoded_name)
+
+        # Load HTML content
+        html_content = HTML_PATH.read_text(encoding="utf-8")
+
+        # Parse HTML and extract JSON-LD data
+        soup = BeautifulSoup(html_content, "html.parser")
+        script_tag = soup.find("script", type="application/ld+json")
+        json_data = json.loads(script_tag.string)
+
+        # Find matching corpus node
+        corpus_node = next(
+            (item for item in json_data.get("@graph", []) if item.get("@id") == corpus_id),
+            None,
+        )
+
+        corpus_name = corpus_node.get("name")
+        corpus_description = corpus_node.get("description")
+
+        markdown_content = f"""## Name: 
+        {corpus_name}
         
-        pass
+        ## Description: 
+        {corpus_description}
+        """
+
+        return markdown_content
+        
         
 
