@@ -7,10 +7,16 @@ import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List
+from urllib.parse import (
+    unquote,
+    urlparse
+    )
+
 
 # ========== Third-Party Dependencies ==========
 import pandas as pd
 import requests
+from bs4 import BeautifulSoup
 
 # ========== Project-Specific Imports ==========
 from rocrate_tabular.tabulator import ROCrateTabulator
@@ -18,9 +24,11 @@ from rocrate_tabular.tabulator import ROCrateTabulator
 # -------------------------
 # Constants
 # -------------------------
-GENERAL_CONFIG = "./configs/general"
+GENERAL_CONFIG = "./configs/general/general-config.json"
 CORPUS_CONFIG_DIR = "./configs/corpora/"
 TEXT_PROP = "ldac:mainText"
+# path to ro-crate-preview.html
+HTML_PATH = Path("rocrate/ro-crate-preview.html")
 
 # -------------------------------------------------------------
 # Class responsible for loading, unpacking, and processing
@@ -65,7 +73,7 @@ class LDaCATabulator:
         tb=self.tb
         )
         
-        self.tb.config = self.load_config(GENERAL_CONFIG + "/general-config.json")
+        self.tb.config = self.load_config(GENERAL_CONFIG)
         
         self.tb.text_prop = self.text_prop
         
@@ -80,7 +88,7 @@ class LDaCATabulator:
         tb: ROCrateTabulator,
         folder_name: str | None = None,
         db_name: str | None = None,
-        overwrite: bool = False, #HACK If already exist, it may give error or use the same corpus. Use default True
+        overwrite: bool = True, #HACK If already exist, it may give error or use the same corpus. Use default True
         ):
         """
         Download, extract, and tabulate an RO-Crate corpus into a database.
@@ -432,6 +440,53 @@ class LDaCATabulator:
         
         return self._load_entity_table(table)
     
+    def get_corpus_info(self):
+        # Extract corpus ID from URL
+        parsed_url = urlparse(self.url)
+        encoded_name = Path(parsed_url.path).name
+        encoded_name = encoded_name.removesuffix(".zip")
+        corpus_id = unquote(encoded_name)
+
+        # Load HTML content
+        html_content = HTML_PATH.read_text(encoding="utf-8")
+
+        # Parse HTML and extract JSON-LD data
+        soup = BeautifulSoup(html_content, "html.parser")
+        script_tag = soup.find("script", type="application/ld+json")
+        json_data = json.loads(script_tag.string)
+
+        # Find matching corpus node
+        corpus_node = next(
+            (item for item in json_data.get("@graph", []) if item.get("@id") == corpus_id),
+            None,
+        )
+
+        corpus_name = corpus_node.get("name")
+        corpus_description = corpus_node.get("description")
+        date_published = corpus_node.get("datePublished")
+        
+        # get publisher
+        publisher_id = corpus_node.get("publisher")[0].get("@id")
+        
+        publisher = next(
+            (item for item in json_data.get("@graph", []) if item.get("@id") == publisher_id),
+            None,
+        ).get("name")
+
+        markdown_content = f"""## Name: 
+        {corpus_name}
+        
+        ## Description: 
+        {corpus_description}
+        
+        ## Date Published
+        {date_published}
+        
+        ## Publisher
+        {publisher}
+        """
+
+        return markdown_content
     
         
         
