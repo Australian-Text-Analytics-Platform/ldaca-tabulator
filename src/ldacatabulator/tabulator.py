@@ -464,6 +464,14 @@ class LDaCATabulator:
         corpus_name = corpus_node.get("name")
         corpus_description = corpus_node.get("description")
         date_published = corpus_node.get("datePublished")
+        
+        # get publisher
+        publisher_id = corpus_node.get("publisher")[0].get("@id")
+        
+        publisher = next(
+            (item for item in json_data.get("@graph", []) if item.get("@id") == publisher_id),
+            None,
+        ).get("name")
 
         markdown_content = f"""## Name: 
         {corpus_name}
@@ -473,6 +481,9 @@ class LDaCATabulator:
         
         ## Date Published
         {date_published}
+        
+        ## Publisher
+        {publisher}
         """
 
         return markdown_content
