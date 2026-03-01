@@ -28,7 +28,7 @@ GENERAL_CONFIG = "./configs/general/general-config.json"
 CORPUS_CONFIG_DIR = "./configs/corpora/"
 TEXT_PROP = "ldac:mainText"
 # path to ro-crate-preview.html
-HTML_PATH = Path("rocrate/ro-crate-preview.html")
+HTML_PATH = Path("./rocrate/ro-crate-preview.html")
 
 # -------------------------------------------------------------
 # Class responsible for loading, unpacking, and processing
@@ -441,6 +441,25 @@ class LDaCATabulator:
         return self._load_entity_table(table)
     
     def get_corpus_info(self):
+        """
+        Extract metadata information about the corpus.
+
+        This method parses the local RO-Crate HTML metadata file and retrieves
+        basic corpus information including:
+
+        - Corpus name
+        - Description
+        - Publication date
+        - Publisher name
+
+        The corpus identifier is extracted from the download URL and used to
+        locate the corresponding node in the JSON-LD graph.
+
+        Returns
+        -------
+        str
+            A formatted Markdown string containing the corpus metadata.
+        """
         # Extract corpus ID from URL
         parsed_url = urlparse(self.url)
         encoded_name = Path(parsed_url.path).name
