@@ -28,7 +28,7 @@ GENERAL_CONFIG = "./configs/general/general-config.json"
 CORPUS_CONFIG_DIR = "./configs/corpora/"
 TEXT_PROP = "ldac:mainText"
 # path to ro-crate-preview.html
-HTML_PATH = Path("rocrate/ro-crate-preview.html")
+HTML_PATH = Path("./rocrate/ro-crate-preview.html")
 
 # -------------------------------------------------------------
 # Class responsible for loading, unpacking, and processing
