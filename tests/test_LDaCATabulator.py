@@ -8,6 +8,7 @@ import pandas as pd
 import pytest
 
 from src.ldacatabulator.tabulator import LDaCATabulator
+import src.ldacatabulator.tabulator as tabulator_module
 
 
 # --------------------------------------------------------------------
@@ -100,6 +101,17 @@ def test_load_entity_table(tmp_path):
     inst.tb.entity_table.assert_called_once_with("RepositoryObject")
 
 
+def test_load_entity_table_missing_table_returns_none(tmp_path):
+    inst = _blank_instance()
+    inst.database = tmp_path / "test.db"
+    inst.tb = MagicMock()
+    inst.tb.entity_table.side_effect = Exception("missing")
+
+    df = LDaCATabulator._load_entity_table(inst, "MissingTable")
+
+    assert df is None
+
+
 # --------------------------------------------------------------------
 # Helper df for testing drop_id_columns
 # --------------------------------------------------------------------
@@ -119,6 +131,18 @@ def test_drop_id_columns():
     df = _df_from_json_ids()
     out = LDaCATabulator.drop_id_columns(df)
     assert set(out.columns) == {"name", "text"}
+
+
+def test_drop_high_null_columns():
+    df = pd.DataFrame(
+        {
+            "keep_edge_99pct": [None] * 99 + [1],
+            "drop_100pct": [None] * 100,
+            "keep_full": list(range(100)),
+        }
+    )
+    out = LDaCATabulator.drop_high_null_columns(df)
+    assert set(out.columns) == {"keep_edge_99pct", "keep_full"}
     
 
 def test_get_text():
@@ -164,3 +188,115 @@ def test_get_organization():
     assert "mostly_null" not in df.columns
     mock_load.assert_called_once_with("Organization")
 
+
+def test_get_speaker():
+    tab = _blank_instance()
+    raw = pd.DataFrame({"name": ["speaker"], "mostly_null": [None]})
+
+    with patch.object(tab, "_load_entity_table", return_value=raw) as mock_load:
+        df = tab.get_speaker()
+
+    assert isinstance(df, pd.DataFrame)
+    assert "mostly_null" not in df.columns
+    mock_load.assert_called_once_with("Speaker")
+
+
+def test_post_init_sets_config_and_text_prop():
+    fake_tb = MagicMock()
+    expected_config = {"tables": {}}
+
+    with patch.object(
+        LDaCATabulator,
+        "_unzip_corpus",
+        return_value=(Path("/tmp/rocrate.db"), Path("/tmp/rocrate")),
+    ) as mock_unzip, patch.object(
+        LDaCATabulator,
+        "load_config",
+        return_value=expected_config,
+    ) as mock_load_config:
+        tab = LDaCATabulator("https://example.com/fake.zip", text_prop="ldac:testText", tb=fake_tb)
+
+    assert tab.database == Path("/tmp/rocrate.db")
+    assert tab.extract_to == Path("/tmp/rocrate")
+    assert fake_tb.config == expected_config
+    assert fake_tb.text_prop == "ldac:testText"
+    mock_unzip.assert_called_once()
+    mock_load_config.assert_called_once()
+
+
+def test_corpus_specific_tables_list():
+    tab = _blank_instance()
+    tab.url = "https://example.com/~23089559.zip"
+
+    with patch.object(LDaCATabulator, "load_config", return_value={"tables": {"TableA": {}, "TableB": {}}}) as mock_cfg:
+        result = tab.corpus_specific_tables_list()
+
+    assert "TableA" in result
+    assert "TableB" in result
+    mock_cfg.assert_called_once_with("./configs/corpora/23089559.json")
+
+
+def test_corpus_specific_tables_list_invalid_url():
+    tab = _blank_instance()
+    tab.url = "https://example.com/no-corpus-id.zip"
+
+    result = tab.corpus_specific_tables_list()
+
+    assert "Could not extract corpus ID" in result
+
+
+def test_corpus_specific_tables_updates_config_and_loads():
+    tab = _blank_instance()
+    tab.url = "https://example.com/~24769173.zip"
+    tab.tb = MagicMock()
+    expected_df = pd.DataFrame({"x": [1]})
+    cfg = {"tables": {"MyTable": {}}}
+
+    with patch.object(LDaCATabulator, "load_config", return_value=cfg) as mock_cfg, patch.object(
+        tab, "_load_entity_table", return_value=expected_df
+    ) as mock_load_table:
+        result = tab.corpus_specific_tables("MyTable")
+
+    assert result.equals(expected_df)
+    assert tab.tb.config == cfg
+    mock_cfg.assert_called_once_with("./configs/corpora/24769173.json")
+    mock_load_table.assert_called_once_with("MyTable")
+
+
+def test_get_corpus_info(tmp_path, monkeypatch):
+    html = """
+    <html>
+      <body>
+        <script type="application/ld+json">
+        {
+          "@graph": [
+            {
+              "@id": "test corpus",
+              "name": "Test Corpus",
+              "description": "Corpus description",
+              "datePublished": "2025-01-01",
+              "publisher": [{"@id": "pub-1"}]
+            },
+            {
+              "@id": "pub-1",
+              "name": "LDaCA Publisher"
+            }
+          ]
+        }
+        </script>
+      </body>
+    </html>
+    """
+    html_path = tmp_path / "ro-crate-preview.html"
+    html_path.write_text(html, encoding="utf-8")
+    monkeypatch.setattr(tabulator_module, "HTML_PATH", html_path)
+
+    tab = _blank_instance()
+    tab.url = "https://example.com/download/test%20corpus.zip"
+
+    out = tab.get_corpus_info()
+
+    assert "Test Corpus" in out
+    assert "Corpus description" in out
+    assert "2025-01-01" in out
+    assert "LDaCA Publisher" in out
