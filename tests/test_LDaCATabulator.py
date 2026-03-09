@@ -1,10 +1,13 @@
-from src.ldacatabulator.tabulator import LDaCATabulator
-import pandas as pd
-from rocrate_tabular.tabulator import ROCrateTabulator
+from io import BytesIO
 from pathlib import Path
-from unittest.mock import patch, MagicMock
 import sqlite3
+from unittest.mock import MagicMock, patch
+import zipfile
+
+import pandas as pd
 import pytest
+
+from src.ldacatabulator.tabulator import LDaCATabulator
 
 
 # --------------------------------------------------------------------
@@ -19,35 +22,48 @@ def _blank_instance():
     return LDaCATabulator.__new__(LDaCATabulator)
 
 
+def _make_zip_bytes() -> bytes:
+    buf = BytesIO()
+    with zipfile.ZipFile(buf, mode="w") as zf:
+        zf.writestr("ro-crate-metadata.json", '{"@context": "https://w3id.org/ro/crate/1.1/context"}')
+    return buf.getvalue()
+
+
 # --------------------------------------------------------------------
 # Test: _unzip_corpus
 # --------------------------------------------------------------------
-def test_unzip_corpus(tmp_path):
-    zip_path = Path("tests/crates/languageFamily.zip")
-    zip_bytes = zip_path.read_bytes()
+def test_unzip_corpus(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    zip_bytes = _make_zip_bytes()
 
     mock_response = MagicMock()
-    mock_response.content = zip_bytes
+    mock_response.__enter__.return_value = mock_response
+    mock_response.__exit__.return_value = None
     mock_response.raise_for_status = MagicMock()
+    mock_response.iter_content.return_value = [zip_bytes]
 
     fake_tb = MagicMock()
 
     tab = _blank_instance()
 
-    with patch("requests.get", return_value=mock_response):
+    with patch("src.ldacatabulator.tabulator.requests.get", return_value=mock_response):
         db_path, extracted_path = LDaCATabulator._unzip_corpus(
             tab,
             zip_url="http://fake-url.com/zip",
             tb=fake_tb,
             folder_name="testCorpus",
             db_name="testCorpus.db",
+            overwrite=True,
         )
 
     # Assertions
     assert extracted_path.exists()
     assert len(list(extracted_path.iterdir())) > 0
     assert db_path == Path.cwd() / "testCorpus.db"
-    fake_tb.crate_to_db.assert_called_once()
+    fake_tb.crate_to_db.assert_called_once_with(
+        str(Path.cwd() / "testCorpus"),
+        str(Path.cwd() / "testCorpus.db"),
+    )
 
 
 # --------------------------------------------------------------------
@@ -61,19 +77,9 @@ def test_load_config():
 
 
 # --------------------------------------------------------------------
-# Helper: create a DB from a folder
+# Test: _load_entity_table
 # --------------------------------------------------------------------
-def _create_db(tb: ROCrateTabulator, folder: str | Path, db_name: str):
-    folder_path = Path(folder)
-    database_path = folder_path / db_name
-    tb.crate_to_db(str(folder_path), str(database_path))
-    return database_path
-
-
-# --------------------------------------------------------------------
-# Test: _load_table_from_db
-# --------------------------------------------------------------------
-def test_load_table_from_db(tmp_path):
+def test_load_entity_table(tmp_path):
     db_path = tmp_path / "test.db"
 
     # Create fake DB table
@@ -83,16 +89,15 @@ def test_load_table_from_db(tmp_path):
     conn.commit()
     conn.close()
 
-    inst = _blank_instance
+    inst = _blank_instance()
+    inst.database = db_path
+    inst.tb = MagicMock()
 
-    df = LDaCATabulator._load_table_from_db(
-        inst,
-        str(db_path),
-        "RepositoryObject"
-    )
+    df = LDaCATabulator._load_entity_table(inst, "RepositoryObject")
 
     assert not df.empty
     assert list(df.columns) == ["id", "value"]
+    inst.tb.entity_table.assert_called_once_with("RepositoryObject")
 
 
 # --------------------------------------------------------------------
@@ -116,48 +121,46 @@ def test_drop_id_columns():
     assert set(out.columns) == {"name", "text"}
     
 
-# --------------------------------------------------------------------
-# Test: methods in class, that is, get_text(), get_people(), 
-#   and get_organization
-# --------------------------------------------------------------------    
-@pytest.fixture
-def tabulator():
-    """
-    Fixture that:
-    - Loads your local test ZIP
-    - Mocks requests.get()
-    - Creates a fully initialized LDaCATabulator
-    """
+def test_get_text():
+    tab = _blank_instance()
+    raw = pd.DataFrame(
+        {
+            "text": ["a"],
+            "kept": [1],
+            "name_id": ["x"],
+            "mostly_null": [None],
+        }
+    )
 
-    zip_path = Path("tests/crates/languageFamily.zip")
-    zip_bytes = zip_path.read_bytes()
+    with patch.object(tab, "_load_entity_table", return_value=raw) as mock_load:
+        df = tab.get_text()
 
-    # Create fake HTTP response
-    mock_response = MagicMock()
-    mock_response.content = zip_bytes
-    mock_response.raise_for_status = MagicMock()
-
-    # Mock requests.get globally for this fixture
-    with patch("requests.get", return_value=mock_response):
-        tab = LDaCATabulator("https://example.com/fake.zip")
-
-    return tab
-
-def test_get_text(tabulator):
-    df = tabulator.get_text()
-    assert df is not None
-    assert not df.empty
-
-    
-def test_get_people(tabulator):
-    df = tabulator.get_people()
-    assert df is not None
     assert isinstance(df, pd.DataFrame)
+    assert "name_id" not in df.columns
+    assert "mostly_null" not in df.columns
+    mock_load.assert_called_once_with("RepositoryObject")
 
 
-def test_get_organization(tabulator):
-    df = tabulator.get_organization()
-    assert df is not None
+def test_get_people():
+    tab = _blank_instance()
+    raw = pd.DataFrame({"name": ["person"], "mostly_null": [None]})
+
+    with patch.object(tab, "_load_entity_table", return_value=raw) as mock_load:
+        df = tab.get_people()
+
     assert isinstance(df, pd.DataFrame)
+    assert "mostly_null" not in df.columns
+    mock_load.assert_called_once_with("Person")
 
+
+def test_get_organization():
+    tab = _blank_instance()
+    raw = pd.DataFrame({"name": ["org"], "mostly_null": [None]})
+
+    with patch.object(tab, "_load_entity_table", return_value=raw) as mock_load:
+        df = tab.get_organization()
+
+    assert isinstance(df, pd.DataFrame)
+    assert "mostly_null" not in df.columns
+    mock_load.assert_called_once_with("Organization")
 

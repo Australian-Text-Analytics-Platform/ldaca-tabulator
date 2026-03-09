@@ -20,7 +20,7 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-rocrate-tabular = { git = "https://github.com/AttiqUrRehmann/rocrate-tabular.git", rev = "optimise_tabular" }
+rocrate-tabular = { git = "https://github.com/AttiqUrRehmann/rocrate-tabular.git", rev = "optimise_entity_table" }
 
 [dependency-groups]
 dev = [
