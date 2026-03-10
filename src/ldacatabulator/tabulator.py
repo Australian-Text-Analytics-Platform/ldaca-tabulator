@@ -1,5 +1,6 @@
 # ========== Python Standard Library ==========
 import json
+import hashlib
 import re
 import shutil
 import sqlite3
@@ -27,8 +28,6 @@ from rocrate_tabular.tabulator import ROCrateTabulator
 GENERAL_CONFIG = "./configs/general/general-config.json"
 CORPUS_CONFIG_DIR = "./configs/corpora/"
 TEXT_PROP = "ldac:mainText"
-# path to ro-crate-preview.html
-HTML_PATH = Path("./rocrate/ro-crate-preview.html")
 
 # -------------------------------------------------------------
 # Class responsible for loading, unpacking, and processing
@@ -82,13 +81,28 @@ class LDaCATabulator:
     # -----------------------------------------------
     
     # Download and unzip
+    @staticmethod
+    def _default_storage_names(zip_url: str) -> tuple[str, str]:
+        """
+        Build deterministic per-corpus storage names from the URL.
+
+        This avoids collisions when multiple collections are imported at once.
+        """
+        parsed = urlparse(zip_url)
+        base_name = unquote(Path(parsed.path).stem) or "rocrate"
+        safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", base_name).strip("._-") or "rocrate"
+        short_hash = hashlib.sha1(zip_url.encode("utf-8")).hexdigest()[:10]
+        folder_name = f"rocrate_{safe_name}_{short_hash}"
+        db_name = f"{folder_name}.db"
+        return folder_name, db_name
+
     def _unzip_corpus(
         self,
         zip_url: str,
         tb: ROCrateTabulator,
         folder_name: str | None = None,
         db_name: str | None = None,
-        overwrite: bool = True, #HACK If already exist, it may give error or use the same corpus. Use default True
+        overwrite: bool = True,
         ):
         """
         Download, extract, and tabulate an RO-Crate corpus into a database.
@@ -105,11 +119,11 @@ class LDaCATabulator:
             Instance of ROCrateTabulator used to convert the extracted crate into
             a database via `crate_to_db()`.
         folder_name : str | None, optional
-            Name of the directory to extract the corpus into. Defaults to
-            `"rocrate"` if not provided.
+            Name of the directory to extract the corpus into. Defaults to a
+            URL-derived unique folder name if not provided.
         db_name : str | None, optional
             Name of the output SQLite database file. Defaults to
-            `"{folder_name}.db"` if not provided.
+            the URL-derived folder name with `.db` suffix if not provided.
         overwrite : bool, optional
             If `True` and the target extraction folder already exists, it will be
             deleted and recreated before extraction. If `False` and the folder
@@ -132,10 +146,11 @@ class LDaCATabulator:
         """
 
         # Resolve target names
+        default_folder_name, default_db_name = self._default_storage_names(zip_url)
         if folder_name is None:
-            folder_name = "rocrate"
+            folder_name = default_folder_name
         if db_name is None:
-            db_name = f"{folder_name}.db"
+            db_name = default_db_name
 
         cwd = Path.cwd()
         extract_to = cwd / folder_name
@@ -144,14 +159,16 @@ class LDaCATabulator:
         # To save downloaded zip
         zip_file = cwd / f"{folder_name}.zip"
 
+        metadata_path = extract_to / "ro-crate-metadata.json"
+        needs_download = overwrite or (not metadata_path.exists())
+
         # Destination
         if extract_to.exists() and overwrite:
             shutil.rmtree(extract_to)
 
-        extract_to.mkdir(parents=True, exist_ok=True)
-
-        # Download/extract if this is first time OR overwrite=True
-        if overwrite or (not extract_to.exists()):
+        # Download/extract if metadata is missing OR overwrite=True
+        if needs_download:
+            extract_to.mkdir(parents=True, exist_ok=True)
             with requests.get(zip_url, stream=True, timeout=20) as resp:
                 resp.raise_for_status()
                 with open(zip_file, "wb") as f:
@@ -466,8 +483,9 @@ class LDaCATabulator:
         encoded_name = encoded_name.removesuffix(".zip")
         corpus_id = unquote(encoded_name)
 
-        # Load HTML content
-        html_content = HTML_PATH.read_text(encoding="utf-8")
+        # Load HTML content for this extracted corpus
+        html_path = self.extract_to / "ro-crate-preview.html"
+        html_content = html_path.read_text(encoding="utf-8")
 
         # Parse HTML and extract JSON-LD data
         soup = BeautifulSoup(html_content, "html.parser")
@@ -509,4 +527,3 @@ class LDaCATabulator:
     
         
         
-
