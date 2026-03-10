@@ -8,7 +8,6 @@ import pandas as pd
 import pytest
 
 from src.ldacatabulator.tabulator import LDaCATabulator
-import src.ldacatabulator.tabulator as tabulator_module
 
 
 # --------------------------------------------------------------------
@@ -263,7 +262,7 @@ def test_corpus_specific_tables_updates_config_and_loads():
     mock_load_table.assert_called_once_with("MyTable")
 
 
-def test_get_corpus_info(tmp_path, monkeypatch):
+def test_get_corpus_info(tmp_path):
     html = """
     <html>
       <body>
@@ -289,10 +288,10 @@ def test_get_corpus_info(tmp_path, monkeypatch):
     """
     html_path = tmp_path / "ro-crate-preview.html"
     html_path.write_text(html, encoding="utf-8")
-    monkeypatch.setattr(tabulator_module, "HTML_PATH", html_path)
 
     tab = _blank_instance()
     tab.url = "https://example.com/download/test%20corpus.zip"
+    tab.extract_to = tmp_path
 
     out = tab.get_corpus_info()
 
@@ -300,3 +299,12 @@ def test_get_corpus_info(tmp_path, monkeypatch):
     assert "Corpus description" in out
     assert "2025-01-01" in out
     assert "LDaCA Publisher" in out
+
+
+def test_default_storage_names_are_collection_specific():
+    name1 = LDaCATabulator._default_storage_names("https://example.com/download/~123.zip")
+    name2 = LDaCATabulator._default_storage_names("https://example.com/download/~456.zip")
+
+    assert name1 != name2
+    assert name1[0].startswith("rocrate_")
+    assert name1[1].endswith(".db")
