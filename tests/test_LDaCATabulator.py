@@ -29,6 +29,13 @@ def _make_zip_bytes() -> bytes:
     return buf.getvalue()
 
 
+def _make_zip_bytes_with_metadata(metadata: str) -> bytes:
+    buf = BytesIO()
+    with zipfile.ZipFile(buf, mode="w") as zf:
+        zf.writestr("ro-crate-metadata.json", metadata)
+    return buf.getvalue()
+
+
 # --------------------------------------------------------------------
 # Test: _unzip_corpus
 # --------------------------------------------------------------------
@@ -63,6 +70,45 @@ def test_unzip_corpus(tmp_path, monkeypatch):
     fake_tb.crate_to_db.assert_called_once_with(
         str(Path.cwd() / "testCorpus"),
         str(Path.cwd() / "testCorpus.db"),
+    )
+
+
+def test_unzip_corpus_uses_metadata_corpus_name_for_default_paths(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    metadata = """
+    {
+      "@graph": [
+        {
+          "@id": "fake-corpus",
+          "@type": "Dataset",
+          "name": "Fancy Corpus Name"
+        }
+      ]
+    }
+    """
+    zip_bytes = _make_zip_bytes_with_metadata(metadata)
+
+    mock_response = MagicMock()
+    mock_response.__enter__.return_value = mock_response
+    mock_response.__exit__.return_value = None
+    mock_response.raise_for_status = MagicMock()
+    mock_response.iter_content.return_value = [zip_bytes]
+
+    fake_tb = MagicMock()
+    tab = _blank_instance()
+
+    with patch("src.ldacatabulator.tabulator.requests.get", return_value=mock_response):
+        db_path, extracted_path = LDaCATabulator._unzip_corpus(
+            tab,
+            zip_url="http://fake-url.com/fake-corpus.zip",
+            tb=fake_tb,
+        )
+
+    assert extracted_path.name == "Fancy_Corpus_Name"
+    assert db_path.name == "Fancy_Corpus_Name.db"
+    fake_tb.crate_to_db.assert_called_once_with(
+        str(Path.cwd() / "Fancy_Corpus_Name"),
+        str(Path.cwd() / "Fancy_Corpus_Name.db"),
     )
 
 
@@ -306,5 +352,5 @@ def test_default_storage_names_are_collection_specific():
     name2 = LDaCATabulator._default_storage_names("https://example.com/download/~456.zip")
 
     assert name1 != name2
-    assert name1[0].startswith("rocrate_")
+    assert name1[0] == "123"
     assert name1[1].endswith(".db")
