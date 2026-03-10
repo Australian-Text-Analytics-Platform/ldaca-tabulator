@@ -1,6 +1,5 @@
 # ========== Python Standard Library ==========
 import json
-import hashlib
 import re
 import shutil
 import sqlite3
@@ -82,18 +81,71 @@ class LDaCATabulator:
     
     # Download and unzip
     @staticmethod
+    def _sanitize_storage_name(value: str) -> str:
+        safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", value).strip("._-")
+        return safe_name or "rocrate"
+
+    @staticmethod
+    def _read_corpus_name_from_metadata(extract_to: Path, zip_url: str) -> str | None:
+        """
+        Read the corpus display name from ro-crate-metadata.json, if available.
+        """
+        metadata_path = extract_to / "ro-crate-metadata.json"
+        if not metadata_path.exists():
+            return None
+
+        data = json.loads(metadata_path.read_text(encoding="utf-8"))
+        graph = data.get("@graph", [])
+
+        parsed = urlparse(zip_url)
+        corpus_id = unquote(Path(parsed.path).name).removesuffix(".zip")
+
+        corpus_node = next((item for item in graph if item.get("@id") == corpus_id), None)
+        if corpus_node and corpus_node.get("name"):
+            return str(corpus_node["name"])
+
+        dataset_node = next(
+            (
+                item
+                for item in graph
+                if (
+                    ("Dataset" in item.get("@type", []))
+                    if isinstance(item.get("@type"), list)
+                    else item.get("@type") == "Dataset"
+                )
+                and item.get("name")
+            ),
+            None,
+        )
+        if dataset_node:
+            return str(dataset_node["name"])
+
+        return None
+
+    @staticmethod
+    def _unique_storage_names(cwd: Path, base_name: str) -> tuple[str, str]:
+        """
+        Return non-conflicting folder/db names based on base_name.
+        """
+        safe_base = LDaCATabulator._sanitize_storage_name(base_name)
+        candidate = safe_base
+        idx = 2
+        while (cwd / candidate).exists() or (cwd / f"{candidate}.db").exists():
+            candidate = f"{safe_base}_{idx}"
+            idx += 1
+        return candidate, f"{candidate}.db"
+
+    @staticmethod
     def _default_storage_names(zip_url: str) -> tuple[str, str]:
         """
-        Build deterministic per-corpus storage names from the URL.
-
-        This avoids collisions when multiple collections are imported at once.
+        Build initial storage names from the decoded corpus filename.
+        Final names may later be updated from crate metadata.
         """
         parsed = urlparse(zip_url)
-        base_name = unquote(Path(parsed.path).stem) or "rocrate"
-        safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", base_name).strip("._-") or "rocrate"
-        short_hash = hashlib.sha1(zip_url.encode("utf-8")).hexdigest()[:10]
-        folder_name = f"rocrate_{safe_name}_{short_hash}"
-        db_name = f"{folder_name}.db"
+        base_name = unquote(Path(parsed.path).name).removesuffix(".zip") or "rocrate"
+        safe_name = LDaCATabulator._sanitize_storage_name(base_name)
+        folder_name = safe_name
+        db_name = f"{safe_name}.db"
         return folder_name, db_name
 
     def _unzip_corpus(
@@ -102,7 +154,7 @@ class LDaCATabulator:
         tb: ROCrateTabulator,
         folder_name: str | None = None,
         db_name: str | None = None,
-        overwrite: bool = True,
+        overwrite: bool = False,
         ):
         """
         Download, extract, and tabulate an RO-Crate corpus into a database.
@@ -120,10 +172,11 @@ class LDaCATabulator:
             a database via `crate_to_db()`.
         folder_name : str | None, optional
             Name of the directory to extract the corpus into. Defaults to a
-            URL-derived unique folder name if not provided.
+            URL-derived folder name if not provided, and may be replaced by the
+            corpus metadata name after extraction.
         db_name : str | None, optional
             Name of the output SQLite database file. Defaults to
-            the URL-derived folder name with `.db` suffix if not provided.
+            the inferred folder name with `.db` suffix if not provided.
         overwrite : bool, optional
             If `True` and the target extraction folder already exists, it will be
             deleted and recreated before extraction. If `False` and the folder
@@ -145,7 +198,10 @@ class LDaCATabulator:
         updated regardless of extraction behavior.
         """
 
-        # Resolve target names
+        user_provided_folder = folder_name is not None
+        user_provided_db = db_name is not None
+
+        # Resolve initial target names
         default_folder_name, default_db_name = self._default_storage_names(zip_url)
         if folder_name is None:
             folder_name = default_folder_name
@@ -180,6 +236,23 @@ class LDaCATabulator:
                 zf.extractall(extract_to)
 
             zip_file.unlink(missing_ok=True)
+
+            # If names were not explicitly provided, prefer crate corpus name.
+            if not user_provided_folder and not user_provided_db:
+                corpus_name = self._read_corpus_name_from_metadata(extract_to, zip_url)
+                if corpus_name:
+                    desired_folder = self._sanitize_storage_name(corpus_name)
+                    if desired_folder and desired_folder != extract_to.name:
+                        desired_extract_to = cwd / desired_folder
+                        if desired_extract_to.exists():
+                            desired_folder, desired_db = self._unique_storage_names(cwd, desired_folder)
+                            desired_extract_to = cwd / desired_folder
+                        else:
+                            desired_db = f"{desired_folder}.db"
+
+                        shutil.move(str(extract_to), str(desired_extract_to))
+                        extract_to = desired_extract_to
+                        database = cwd / desired_db
 
         # Build (or connect) DB
         tb.crate_to_db(str(extract_to), str(database))
