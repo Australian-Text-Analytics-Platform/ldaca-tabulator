@@ -73,7 +73,7 @@ def test_unzip_corpus(tmp_path, monkeypatch):
     )
 
 
-def test_unzip_corpus_uses_metadata_corpus_name_for_default_paths(tmp_path, monkeypatch):
+def test_unzip_uses_metadata_name(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     metadata = """
     {
@@ -290,7 +290,7 @@ def test_corpus_specific_tables_list_invalid_url():
     assert "Could not extract corpus ID" in result
 
 
-def test_corpus_specific_tables_updates_config_and_loads():
+def test_corpus_specific_tables_loads():
     tab = _blank_instance()
     tab.url = "https://example.com/~24769173.zip"
     tab.tb = MagicMock()
@@ -347,9 +347,45 @@ def test_get_corpus_info(tmp_path):
     assert "LDaCA Publisher" in out
 
 
-def test_default_storage_names_are_collection_specific():
-    name1 = LDaCATabulator._default_storage_names("https://example.com/download/~123.zip")
-    name2 = LDaCATabulator._default_storage_names("https://example.com/download/~456.zip")
+def test_get_corpus_info_with_dict_publisher(tmp_path):
+    html = """
+    <html>
+      <body>
+        <script type="application/ld+json">
+        {
+          "@graph": [
+            {
+              "@id": "test corpus",
+              "name": "Test Corpus",
+              "description": "Corpus description",
+              "datePublished": "2025-01-01",
+              "publisher": {"@id": "pub-1"}
+            },
+            {
+              "@id": "pub-1",
+              "name": "LDaCA Publisher"
+            }
+          ]
+        }
+        </script>
+      </body>
+    </html>
+    """
+    html_path = tmp_path / "ro-crate-preview.html"
+    html_path.write_text(html, encoding="utf-8")
+
+    tab = _blank_instance()
+    tab.url = "https://example.com/download/test%20corpus.zip"
+    tab.extract_to = tmp_path
+
+    out = tab.get_corpus_info()
+
+    assert "LDaCA Publisher" in out
+
+
+def test_names_from_url_differ():
+    name1 = LDaCATabulator._names_from_zip_url("https://example.com/download/~123.zip")
+    name2 = LDaCATabulator._names_from_zip_url("https://example.com/download/~456.zip")
 
     assert name1 != name2
     assert name1[0] == "123"
