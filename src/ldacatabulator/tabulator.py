@@ -81,12 +81,12 @@ class LDaCATabulator:
     
     # Download and unzip
     @staticmethod
-    def _sanitize_storage_name(value: str) -> str:
+    def _make_clean_name(value: str) -> str:
         safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", value).strip("._-")
         return safe_name or "rocrate"
 
     @staticmethod
-    def _read_corpus_name_from_metadata(extract_to: Path, zip_url: str) -> str | None:
+    def _get_corpus_name_from_metadata(extract_to: Path, zip_url: str) -> str | None:
         """
         Read the corpus display name from ro-crate-metadata.json, if available.
         """
@@ -127,7 +127,7 @@ class LDaCATabulator:
         """
         Return non-conflicting folder/db names based on base_name.
         """
-        safe_base = LDaCATabulator._sanitize_storage_name(base_name)
+        safe_base = LDaCATabulator._make_clean_name(base_name)
         candidate = safe_base
         idx = 2
         while (cwd / candidate).exists() or (cwd / f"{candidate}.db").exists():
@@ -136,14 +136,14 @@ class LDaCATabulator:
         return candidate, f"{candidate}.db"
 
     @staticmethod
-    def _default_storage_names(zip_url: str) -> tuple[str, str]:
+    def _names_from_zip_url(zip_url: str) -> tuple[str, str]:
         """
         Build initial storage names from the decoded corpus filename.
         Final names may later be updated from crate metadata.
         """
         parsed = urlparse(zip_url)
         base_name = unquote(Path(parsed.path).name).removesuffix(".zip") or "rocrate"
-        safe_name = LDaCATabulator._sanitize_storage_name(base_name)
+        safe_name = LDaCATabulator._make_clean_name(base_name)
         folder_name = safe_name
         db_name = f"{safe_name}.db"
         return folder_name, db_name
@@ -202,7 +202,7 @@ class LDaCATabulator:
         user_provided_db = db_name is not None
 
         # Resolve initial target names
-        default_folder_name, default_db_name = self._default_storage_names(zip_url)
+        default_folder_name, default_db_name = self._names_from_zip_url(zip_url)
         if folder_name is None:
             folder_name = default_folder_name
         if db_name is None:
@@ -239,9 +239,9 @@ class LDaCATabulator:
 
             # If names were not explicitly provided, prefer crate corpus name.
             if not user_provided_folder and not user_provided_db:
-                corpus_name = self._read_corpus_name_from_metadata(extract_to, zip_url)
+                corpus_name = self._get_corpus_name_from_metadata(extract_to, zip_url)
                 if corpus_name:
-                    desired_folder = self._sanitize_storage_name(corpus_name)
+                    desired_folder = self._make_clean_name(corpus_name)
                     if desired_folder and desired_folder != extract_to.name:
                         desired_extract_to = cwd / desired_folder
                         if desired_extract_to.exists():
@@ -570,18 +570,29 @@ class LDaCATabulator:
             (item for item in json_data.get("@graph", []) if item.get("@id") == corpus_id),
             None,
         )
+        if corpus_node is None:
+            raise ValueError(f"Could not find corpus metadata node for '{corpus_id}'.")
 
         corpus_name = corpus_node.get("name")
         corpus_description = corpus_node.get("description")
         date_published = corpus_node.get("datePublished")
-        
-        # get publisher
-        publisher_id = corpus_node.get("publisher")[0].get("@id")
-        
-        publisher = next(
+
+        # publisher may be a list, dict, string id, or absent
+        publisher_field = corpus_node.get("publisher")
+        publisher_id = None
+        if isinstance(publisher_field, list) and publisher_field:
+            first = publisher_field[0]
+            publisher_id = first.get("@id") if isinstance(first, dict) else first
+        elif isinstance(publisher_field, dict):
+            publisher_id = publisher_field.get("@id")
+        elif isinstance(publisher_field, str):
+            publisher_id = publisher_field
+
+        publisher_node = next(
             (item for item in json_data.get("@graph", []) if item.get("@id") == publisher_id),
             None,
-        ).get("name")
+        )
+        publisher = publisher_node.get("name") if isinstance(publisher_node, dict) else "Unknown"
 
         markdown_content = f"""## Name: 
         {corpus_name}
