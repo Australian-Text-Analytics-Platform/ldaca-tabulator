@@ -152,13 +152,52 @@ class LDaCATabulator:
         db_name = f"{safe_name}.db"
         return folder_name, db_name
 
+    @staticmethod
+    def _metadata_matches_zip_url(metadata_path: Path, zip_url: str) -> bool:
+        """
+        Return True when metadata appears to describe the corpus from zip_url.
+        """
+        if not metadata_path.exists():
+            return False
+
+        try:
+            data = json.loads(metadata_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return False
+
+        graph = data.get("@graph", [])
+        parsed = urlparse(zip_url)
+        corpus_id = unquote(Path(parsed.path).name).removesuffix(".zip")
+        if not corpus_id:
+            return False
+
+        candidates = {corpus_id, f"./{corpus_id}"}
+        return any(item.get("@id") in candidates for item in graph if isinstance(item, dict))
+
+    @staticmethod
+    def _find_existing_extract_for_url(extract_root: Path, zip_url: str) -> Path | None:
+        """
+        Find an already-extracted corpus folder matching zip_url.
+        """
+        if not extract_root.exists():
+            return None
+
+        for child in extract_root.iterdir():
+            if not child.is_dir():
+                continue
+            metadata_path = child / "ro-crate-metadata.json"
+            if LDaCATabulator._metadata_matches_zip_url(metadata_path, zip_url):
+                return child
+
+        return None
+
     def _unzip_corpus(
         self,
         zip_url: str,
         tb: ROCrateTabulator,
         folder_name: str | None = None,
         db_name: str | None = None,
-        overwrite: bool = False,
+        overwrite: bool = True,
         ):
         """
         Download, extract, and tabulate an RO-Crate corpus into a database.
@@ -213,14 +252,31 @@ class LDaCATabulator:
             db_name = default_db_name
 
         cwd = Path.cwd()
-        extract_root = cwd / "temp"
+        extract_root = cwd / "ldacaCollections"
         db_root = cwd / "databases"
         extract_root.mkdir(parents=True, exist_ok=True)
         db_root.mkdir(parents=True, exist_ok=True)
 
         extract_to = extract_root / folder_name
         database = db_root / db_name
+
+        # Resolve to the already-known corpus folder (metadata-based name) when present.
+        # This keeps repeated loads on the same path instead of creating suffixed folders.
+        if not user_provided_folder and not user_provided_db:
+            cached_extract = self._find_existing_extract_for_url(extract_root, zip_url)
+            if cached_extract is not None:
+                extract_to = cached_extract
+                folder_name = cached_extract.name
+                database = db_root / f"{cached_extract.name}.db"
+                # Current policy: fresh rebuild for repeated corpus requests.
+                overwrite = True
+            elif not overwrite and extract_to.exists():
+                overwrite = True
+
         zip_file = extract_root / f"{folder_name}.zip"
+
+        if overwrite:
+            database.unlink(missing_ok=True)
 
         metadata_path = extract_to / "ro-crate-metadata.json"
         needs_download = overwrite or (not metadata_path.exists())
@@ -251,15 +307,17 @@ class LDaCATabulator:
                     desired_folder = self._make_clean_name(corpus_name)
                     if desired_folder and desired_folder != extract_to.name:
                         desired_extract_to = extract_root / desired_folder
+                        desired_db = f"{desired_folder}.db"
                         if desired_extract_to.exists():
-                            desired_folder, desired_db = self._unique_storage_names(
-                                extract_root,
-                                db_root,
-                                desired_folder
-                            )
-                            desired_extract_to = extract_root / desired_folder
-                        else:
-                            desired_db = f"{desired_folder}.db"
+                            if overwrite:
+                                shutil.rmtree(desired_extract_to)
+                            else:
+                                desired_folder, desired_db = self._unique_storage_names(
+                                    extract_root,
+                                    db_root,
+                                    desired_folder
+                                )
+                                desired_extract_to = extract_root / desired_folder
 
                         shutil.move(str(extract_to), str(desired_extract_to))
                         extract_to = desired_extract_to
