@@ -29,6 +29,13 @@ def _make_zip_bytes() -> bytes:
     return buf.getvalue()
 
 
+def _make_zip_bytes_with_metadata(metadata: str) -> bytes:
+    buf = BytesIO()
+    with zipfile.ZipFile(buf, mode="w") as zf:
+        zf.writestr("ro-crate-metadata.json", metadata)
+    return buf.getvalue()
+
+
 # --------------------------------------------------------------------
 # Test: _unzip_corpus
 # --------------------------------------------------------------------
@@ -59,10 +66,142 @@ def test_unzip_corpus(tmp_path, monkeypatch):
     # Assertions
     assert extracted_path.exists()
     assert len(list(extracted_path.iterdir())) > 0
-    assert db_path == Path.cwd() / "testCorpus.db"
+    assert db_path == Path.cwd() / "databases" / "testCorpus.db"
     fake_tb.crate_to_db.assert_called_once_with(
-        str(Path.cwd() / "testCorpus"),
-        str(Path.cwd() / "testCorpus.db"),
+        str(Path.cwd() / "ldacaCollections" / "testCorpus"),
+        str(Path.cwd() / "databases" / "testCorpus.db"),
+    )
+
+
+def test_unzip_uses_metadata_name(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    metadata = """
+    {
+      "@graph": [
+        {
+          "@id": "fake-corpus",
+          "@type": "Dataset",
+          "name": "Fancy Corpus Name"
+        }
+      ]
+    }
+    """
+    zip_bytes = _make_zip_bytes_with_metadata(metadata)
+
+    mock_response = MagicMock()
+    mock_response.__enter__.return_value = mock_response
+    mock_response.__exit__.return_value = None
+    mock_response.raise_for_status = MagicMock()
+    mock_response.iter_content.return_value = [zip_bytes]
+
+    fake_tb = MagicMock()
+    tab = _blank_instance()
+
+    with patch("src.ldacatabulator.tabulator.requests.get", return_value=mock_response):
+        db_path, extracted_path = LDaCATabulator._unzip_corpus(
+            tab,
+            zip_url="http://fake-url.com/fake-corpus.zip",
+            tb=fake_tb,
+        )
+
+    assert extracted_path == Path.cwd() / "ldacaCollections" / "Fancy_Corpus_Name"
+    assert db_path == Path.cwd() / "databases" / "Fancy_Corpus_Name.db"
+    fake_tb.crate_to_db.assert_called_once_with(
+        str(Path.cwd() / "ldacaCollections" / "Fancy_Corpus_Name"),
+        str(Path.cwd() / "databases" / "Fancy_Corpus_Name.db"),
+    )
+
+
+def test_unzip_redownloads_when_cached_metadata_named_folder_exists(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    cached = tmp_path / "ldacaCollections" / "Fancy_Corpus_Name"
+    cached.mkdir(parents=True, exist_ok=True)
+    metadata = """
+    {
+      "@graph": [
+        {
+          "@id": "fake-corpus",
+          "@type": "Dataset",
+          "name": "Fancy Corpus Name"
+        }
+      ]
+    }
+    """
+    (cached / "ro-crate-metadata.json").write_text(metadata, encoding="utf-8")
+    (cached / "old.txt").write_text("stale", encoding="utf-8")
+
+    zip_bytes = _make_zip_bytes_with_metadata(metadata)
+    mock_response = MagicMock()
+    mock_response.__enter__.return_value = mock_response
+    mock_response.__exit__.return_value = None
+    mock_response.raise_for_status = MagicMock()
+    mock_response.iter_content.return_value = [zip_bytes]
+
+    fake_tb = MagicMock()
+    tab = _blank_instance()
+
+    with patch("src.ldacatabulator.tabulator.requests.get", return_value=mock_response) as mock_get:
+        db_path, extracted_path = LDaCATabulator._unzip_corpus(
+            tab,
+            zip_url="http://fake-url.com/fake-corpus.zip",
+            tb=fake_tb,
+            overwrite=False,
+        )
+
+    mock_get.assert_called_once()
+    assert extracted_path == cached
+    assert not (cached / "old.txt").exists()
+    assert db_path == tmp_path / "databases" / "Fancy_Corpus_Name.db"
+    fake_tb.crate_to_db.assert_called_once_with(
+        str(cached),
+        str(tmp_path / "databases" / "Fancy_Corpus_Name.db"),
+    )
+
+
+def test_unzip_refresh_reuses_same_metadata_folder_name(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    cached = tmp_path / "ldacaCollections" / "Fancy_Corpus_Name"
+    cached.mkdir(parents=True, exist_ok=True)
+    metadata = """
+    {
+      "@graph": [
+        {
+          "@id": "fake-corpus",
+          "@type": "Dataset",
+          "name": "Fancy Corpus Name"
+        }
+      ]
+    }
+    """
+    (cached / "ro-crate-metadata.json").write_text(metadata, encoding="utf-8")
+    (cached / "old.txt").write_text("stale", encoding="utf-8")
+
+    zip_bytes = _make_zip_bytes_with_metadata(metadata)
+    mock_response = MagicMock()
+    mock_response.__enter__.return_value = mock_response
+    mock_response.__exit__.return_value = None
+    mock_response.raise_for_status = MagicMock()
+    mock_response.iter_content.return_value = [zip_bytes]
+
+    fake_tb = MagicMock()
+    tab = _blank_instance()
+
+    with patch("src.ldacatabulator.tabulator.requests.get", return_value=mock_response) as mock_get:
+        db_path, extracted_path = LDaCATabulator._unzip_corpus(
+            tab,
+            zip_url="http://fake-url.com/fake-corpus.zip",
+            tb=fake_tb,
+            overwrite=False,
+        )
+
+    mock_get.assert_called_once()
+    assert extracted_path == cached
+    assert not (cached / "old.txt").exists()
+    assert not (tmp_path / "ldacaCollections" / "Fancy_Corpus_Name_2").exists()
+    assert db_path == tmp_path / "databases" / "Fancy_Corpus_Name.db"
+    fake_tb.crate_to_db.assert_called_once_with(
+        str(cached),
+        str(tmp_path / "databases" / "Fancy_Corpus_Name.db"),
     )
 
 
@@ -244,7 +383,7 @@ def test_corpus_specific_tables_list_invalid_url():
     assert "Could not extract corpus ID" in result
 
 
-def test_corpus_specific_tables_updates_config_and_loads():
+def test_corpus_specific_tables_loads():
     tab = _blank_instance()
     tab.url = "https://example.com/~24769173.zip"
     tab.tb = MagicMock()
@@ -301,10 +440,46 @@ def test_get_corpus_info(tmp_path):
     assert "LDaCA Publisher" in out
 
 
-def test_default_storage_names_are_collection_specific():
-    name1 = LDaCATabulator._default_storage_names("https://example.com/download/~123.zip")
-    name2 = LDaCATabulator._default_storage_names("https://example.com/download/~456.zip")
+def test_get_corpus_info_with_dict_publisher(tmp_path):
+    html = """
+    <html>
+      <body>
+        <script type="application/ld+json">
+        {
+          "@graph": [
+            {
+              "@id": "test corpus",
+              "name": "Test Corpus",
+              "description": "Corpus description",
+              "datePublished": "2025-01-01",
+              "publisher": {"@id": "pub-1"}
+            },
+            {
+              "@id": "pub-1",
+              "name": "LDaCA Publisher"
+            }
+          ]
+        }
+        </script>
+      </body>
+    </html>
+    """
+    html_path = tmp_path / "ro-crate-preview.html"
+    html_path.write_text(html, encoding="utf-8")
+
+    tab = _blank_instance()
+    tab.url = "https://example.com/download/test%20corpus.zip"
+    tab.extract_to = tmp_path
+
+    out = tab.get_corpus_info()
+
+    assert "LDaCA Publisher" in out
+
+
+def test_names_from_url_differ():
+    name1 = LDaCATabulator._names_from_zip_url("https://example.com/download/~123.zip")
+    name2 = LDaCATabulator._names_from_zip_url("https://example.com/download/~456.zip")
 
     assert name1 != name2
-    assert name1[0].startswith("rocrate_")
+    assert name1[0] == "123"
     assert name1[1].endswith(".db")

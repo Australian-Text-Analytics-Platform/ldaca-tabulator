@@ -1,6 +1,5 @@
 # ========== Python Standard Library ==========
 import json
-import hashlib
 import re
 import shutil
 import sqlite3
@@ -82,19 +81,115 @@ class LDaCATabulator:
     
     # Download and unzip
     @staticmethod
-    def _default_storage_names(zip_url: str) -> tuple[str, str]:
-        """
-        Build deterministic per-corpus storage names from the URL.
+    def _make_clean_name(value: str) -> str:
+        safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", value).strip("._-")
+        return safe_name or "rocrate"
 
-        This avoids collisions when multiple collections are imported at once.
+    @staticmethod
+    def _get_corpus_name_from_metadata(extract_to: Path, zip_url: str) -> str | None:
+        """
+        Read the corpus display name from ro-crate-metadata.json, if available.
+        """
+        metadata_path = extract_to / "ro-crate-metadata.json"
+        if not metadata_path.exists():
+            return None
+
+        data = json.loads(metadata_path.read_text(encoding="utf-8"))
+        graph = data.get("@graph", [])
+
+        parsed = urlparse(zip_url)
+        corpus_id = unquote(Path(parsed.path).name).removesuffix(".zip")
+
+        corpus_node = next((item for item in graph if item.get("@id") == corpus_id), None)
+        if corpus_node and corpus_node.get("name"):
+            return str(corpus_node["name"])
+
+        dataset_node = next(
+            (
+                item
+                for item in graph
+                if (
+                    ("Dataset" in item.get("@type", []))
+                    if isinstance(item.get("@type"), list)
+                    else item.get("@type") == "Dataset"
+                )
+                and item.get("name")
+            ),
+            None,
+        )
+        if dataset_node:
+            return str(dataset_node["name"])
+
+        return None
+
+    @staticmethod
+    def _unique_storage_names(
+        extract_root: Path,
+        db_root: Path,
+        base_name: str
+        ) -> tuple[str, str]:
+        """
+        Return non-conflicting folder/db names based on base_name.
+        """
+        safe_base = LDaCATabulator._make_clean_name(base_name)
+        candidate = safe_base
+        idx = 2
+        while (extract_root / candidate).exists() or (db_root / f"{candidate}.db").exists():
+            candidate = f"{safe_base}_{idx}"
+            idx += 1
+        return candidate, f"{candidate}.db"
+
+    @staticmethod
+    def _names_from_zip_url(zip_url: str) -> tuple[str, str]:
+        """
+        Build initial storage names from the decoded corpus filename.
+        Final names may later be updated from crate metadata.
         """
         parsed = urlparse(zip_url)
-        base_name = unquote(Path(parsed.path).stem) or "rocrate"
-        safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", base_name).strip("._-") or "rocrate"
-        short_hash = hashlib.sha1(zip_url.encode("utf-8")).hexdigest()[:10]
-        folder_name = f"rocrate_{safe_name}_{short_hash}"
-        db_name = f"{folder_name}.db"
+        base_name = unquote(Path(parsed.path).name).removesuffix(".zip") or "rocrate"
+        safe_name = LDaCATabulator._make_clean_name(base_name)
+        folder_name = safe_name
+        db_name = f"{safe_name}.db"
         return folder_name, db_name
+
+    @staticmethod
+    def _metadata_matches_zip_url(metadata_path: Path, zip_url: str) -> bool:
+        """
+        Return True when metadata appears to describe the corpus from zip_url.
+        """
+        if not metadata_path.exists():
+            return False
+
+        try:
+            data = json.loads(metadata_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return False
+
+        graph = data.get("@graph", [])
+        parsed = urlparse(zip_url)
+        corpus_id = unquote(Path(parsed.path).name).removesuffix(".zip")
+        if not corpus_id:
+            return False
+
+        candidates = {corpus_id, f"./{corpus_id}"}
+        return any(item.get("@id") in candidates for item in graph if isinstance(item, dict))
+
+    @staticmethod
+    def _find_existing_extract_for_url(extract_root: Path, zip_url: str) -> Path | None:
+        """
+        Find an already-extracted corpus folder matching zip_url.
+        """
+        if not extract_root.exists():
+            return None
+
+        for child in extract_root.iterdir():
+            if not child.is_dir():
+                continue
+            metadata_path = child / "ro-crate-metadata.json"
+            if LDaCATabulator._metadata_matches_zip_url(metadata_path, zip_url):
+                return child
+
+        return None
 
     def _unzip_corpus(
         self,
@@ -120,10 +215,11 @@ class LDaCATabulator:
             a database via `crate_to_db()`.
         folder_name : str | None, optional
             Name of the directory to extract the corpus into. Defaults to a
-            URL-derived unique folder name if not provided.
+            URL-derived folder name if not provided, and may be replaced by the
+            corpus metadata name after extraction.
         db_name : str | None, optional
             Name of the output SQLite database file. Defaults to
-            the URL-derived folder name with `.db` suffix if not provided.
+            the inferred folder name with `.db` suffix if not provided.
         overwrite : bool, optional
             If `True` and the target extraction folder already exists, it will be
             deleted and recreated before extraction. If `False` and the folder
@@ -145,19 +241,42 @@ class LDaCATabulator:
         updated regardless of extraction behavior.
         """
 
-        # Resolve target names
-        default_folder_name, default_db_name = self._default_storage_names(zip_url)
+        user_provided_folder = folder_name is not None
+        user_provided_db = db_name is not None
+
+        # Resolve initial target names
+        default_folder_name, default_db_name = self._names_from_zip_url(zip_url)
         if folder_name is None:
             folder_name = default_folder_name
         if db_name is None:
             db_name = default_db_name
 
         cwd = Path.cwd()
-        extract_to = cwd / folder_name
-        database = cwd / db_name
-        
-        # To save downloaded zip
-        zip_file = cwd / f"{folder_name}.zip"
+        extract_root = cwd / "ldacaCollections"
+        db_root = cwd / "databases"
+        extract_root.mkdir(parents=True, exist_ok=True)
+        db_root.mkdir(parents=True, exist_ok=True)
+
+        extract_to = extract_root / folder_name
+        database = db_root / db_name
+
+        # Resolve to the already-known corpus folder (metadata-based name) when present.
+        # This keeps repeated loads on the same path instead of creating suffixed folders.
+        if not user_provided_folder and not user_provided_db:
+            cached_extract = self._find_existing_extract_for_url(extract_root, zip_url)
+            if cached_extract is not None:
+                extract_to = cached_extract
+                folder_name = cached_extract.name
+                database = db_root / f"{cached_extract.name}.db"
+                # Current policy: fresh rebuild for repeated corpus requests.
+                overwrite = True
+            elif not overwrite and extract_to.exists():
+                overwrite = True
+
+        zip_file = extract_root / f"{folder_name}.zip"
+
+        if overwrite:
+            database.unlink(missing_ok=True)
 
         metadata_path = extract_to / "ro-crate-metadata.json"
         needs_download = overwrite or (not metadata_path.exists())
@@ -181,7 +300,30 @@ class LDaCATabulator:
 
             zip_file.unlink(missing_ok=True)
 
-        # Build (or connect) DB
+            # If names were not explicitly provided, prefer crate corpus name.
+            if not user_provided_folder and not user_provided_db:
+                corpus_name = self._get_corpus_name_from_metadata(extract_to, zip_url)
+                if corpus_name:
+                    desired_folder = self._make_clean_name(corpus_name)
+                    if desired_folder and desired_folder != extract_to.name:
+                        desired_extract_to = extract_root / desired_folder
+                        desired_db = f"{desired_folder}.db"
+                        if desired_extract_to.exists():
+                            if overwrite:
+                                shutil.rmtree(desired_extract_to)
+                            else:
+                                desired_folder, desired_db = self._unique_storage_names(
+                                    extract_root,
+                                    db_root,
+                                    desired_folder
+                                )
+                                desired_extract_to = extract_root / desired_folder
+
+                        shutil.move(str(extract_to), str(desired_extract_to))
+                        extract_to = desired_extract_to
+                        database = db_root / desired_db
+
+        # Build and connect DB
         tb.crate_to_db(str(extract_to), str(database))
         return database, extract_to
     
@@ -497,18 +639,29 @@ class LDaCATabulator:
             (item for item in json_data.get("@graph", []) if item.get("@id") == corpus_id),
             None,
         )
+        if corpus_node is None:
+            raise ValueError(f"Could not find corpus metadata node for '{corpus_id}'.")
 
         corpus_name = corpus_node.get("name")
         corpus_description = corpus_node.get("description")
         date_published = corpus_node.get("datePublished")
-        
-        # get publisher
-        publisher_id = corpus_node.get("publisher")[0].get("@id")
-        
-        publisher = next(
+
+        # publisher may be a list, dict, string id, or absent
+        publisher_field = corpus_node.get("publisher")
+        publisher_id = None
+        if isinstance(publisher_field, list) and publisher_field:
+            first = publisher_field[0]
+            publisher_id = first.get("@id") if isinstance(first, dict) else first
+        elif isinstance(publisher_field, dict):
+            publisher_id = publisher_field.get("@id")
+        elif isinstance(publisher_field, str):
+            publisher_id = publisher_field
+
+        publisher_node = next(
             (item for item in json_data.get("@graph", []) if item.get("@id") == publisher_id),
             None,
-        ).get("name")
+        )
+        publisher = publisher_node.get("name") if isinstance(publisher_node, dict) else "Unknown"
 
         markdown_content = f"""## Name: 
         {corpus_name}
