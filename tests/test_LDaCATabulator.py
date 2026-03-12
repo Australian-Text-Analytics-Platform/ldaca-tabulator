@@ -68,7 +68,7 @@ def test_unzip_corpus(tmp_path, monkeypatch):
     assert len(list(extracted_path.iterdir())) > 0
     assert db_path == Path.cwd() / "databases" / "testCorpus.db"
     fake_tb.crate_to_db.assert_called_once_with(
-        str(Path.cwd() / "temp" / "testCorpus"),
+        str(Path.cwd() / "ldacaCollections" / "testCorpus"),
         str(Path.cwd() / "databases" / "testCorpus.db"),
     )
 
@@ -104,11 +104,104 @@ def test_unzip_uses_metadata_name(tmp_path, monkeypatch):
             tb=fake_tb,
         )
 
-    assert extracted_path == Path.cwd() / "temp" / "Fancy_Corpus_Name"
+    assert extracted_path == Path.cwd() / "ldacaCollections" / "Fancy_Corpus_Name"
     assert db_path == Path.cwd() / "databases" / "Fancy_Corpus_Name.db"
     fake_tb.crate_to_db.assert_called_once_with(
-        str(Path.cwd() / "temp" / "Fancy_Corpus_Name"),
+        str(Path.cwd() / "ldacaCollections" / "Fancy_Corpus_Name"),
         str(Path.cwd() / "databases" / "Fancy_Corpus_Name.db"),
+    )
+
+
+def test_unzip_redownloads_when_cached_metadata_named_folder_exists(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    cached = tmp_path / "ldacaCollections" / "Fancy_Corpus_Name"
+    cached.mkdir(parents=True, exist_ok=True)
+    metadata = """
+    {
+      "@graph": [
+        {
+          "@id": "fake-corpus",
+          "@type": "Dataset",
+          "name": "Fancy Corpus Name"
+        }
+      ]
+    }
+    """
+    (cached / "ro-crate-metadata.json").write_text(metadata, encoding="utf-8")
+    (cached / "old.txt").write_text("stale", encoding="utf-8")
+
+    zip_bytes = _make_zip_bytes_with_metadata(metadata)
+    mock_response = MagicMock()
+    mock_response.__enter__.return_value = mock_response
+    mock_response.__exit__.return_value = None
+    mock_response.raise_for_status = MagicMock()
+    mock_response.iter_content.return_value = [zip_bytes]
+
+    fake_tb = MagicMock()
+    tab = _blank_instance()
+
+    with patch("src.ldacatabulator.tabulator.requests.get", return_value=mock_response) as mock_get:
+        db_path, extracted_path = LDaCATabulator._unzip_corpus(
+            tab,
+            zip_url="http://fake-url.com/fake-corpus.zip",
+            tb=fake_tb,
+            overwrite=False,
+        )
+
+    mock_get.assert_called_once()
+    assert extracted_path == cached
+    assert not (cached / "old.txt").exists()
+    assert db_path == tmp_path / "databases" / "Fancy_Corpus_Name.db"
+    fake_tb.crate_to_db.assert_called_once_with(
+        str(cached),
+        str(tmp_path / "databases" / "Fancy_Corpus_Name.db"),
+    )
+
+
+def test_unzip_refresh_reuses_same_metadata_folder_name(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    cached = tmp_path / "ldacaCollections" / "Fancy_Corpus_Name"
+    cached.mkdir(parents=True, exist_ok=True)
+    metadata = """
+    {
+      "@graph": [
+        {
+          "@id": "fake-corpus",
+          "@type": "Dataset",
+          "name": "Fancy Corpus Name"
+        }
+      ]
+    }
+    """
+    (cached / "ro-crate-metadata.json").write_text(metadata, encoding="utf-8")
+    (cached / "old.txt").write_text("stale", encoding="utf-8")
+
+    zip_bytes = _make_zip_bytes_with_metadata(metadata)
+    mock_response = MagicMock()
+    mock_response.__enter__.return_value = mock_response
+    mock_response.__exit__.return_value = None
+    mock_response.raise_for_status = MagicMock()
+    mock_response.iter_content.return_value = [zip_bytes]
+
+    fake_tb = MagicMock()
+    tab = _blank_instance()
+
+    with patch("src.ldacatabulator.tabulator.requests.get", return_value=mock_response) as mock_get:
+        db_path, extracted_path = LDaCATabulator._unzip_corpus(
+            tab,
+            zip_url="http://fake-url.com/fake-corpus.zip",
+            tb=fake_tb,
+            overwrite=False,
+        )
+
+    mock_get.assert_called_once()
+    assert extracted_path == cached
+    assert not (cached / "old.txt").exists()
+    assert not (tmp_path / "ldacaCollections" / "Fancy_Corpus_Name_2").exists()
+    assert db_path == tmp_path / "databases" / "Fancy_Corpus_Name.db"
+    fake_tb.crate_to_db.assert_called_once_with(
+        str(cached),
+        str(tmp_path / "databases" / "Fancy_Corpus_Name.db"),
     )
 
 
