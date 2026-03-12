@@ -123,14 +123,18 @@ class LDaCATabulator:
         return None
 
     @staticmethod
-    def _unique_storage_names(cwd: Path, base_name: str) -> tuple[str, str]:
+    def _unique_storage_names(
+        extract_root: Path,
+        db_root: Path,
+        base_name: str
+        ) -> tuple[str, str]:
         """
         Return non-conflicting folder/db names based on base_name.
         """
         safe_base = LDaCATabulator._make_clean_name(base_name)
         candidate = safe_base
         idx = 2
-        while (cwd / candidate).exists() or (cwd / f"{candidate}.db").exists():
+        while (extract_root / candidate).exists() or (db_root / f"{candidate}.db").exists():
             candidate = f"{safe_base}_{idx}"
             idx += 1
         return candidate, f"{candidate}.db"
@@ -209,11 +213,14 @@ class LDaCATabulator:
             db_name = default_db_name
 
         cwd = Path.cwd()
-        extract_to = cwd / folder_name
-        database = cwd / db_name
-        
-        # To save downloaded zip
-        zip_file = cwd / f"{folder_name}.zip"
+        extract_root = cwd / "temp"
+        db_root = cwd / "databases"
+        extract_root.mkdir(parents=True, exist_ok=True)
+        db_root.mkdir(parents=True, exist_ok=True)
+
+        extract_to = extract_root / folder_name
+        database = db_root / db_name
+        zip_file = extract_root / f"{folder_name}.zip"
 
         metadata_path = extract_to / "ro-crate-metadata.json"
         needs_download = overwrite or (not metadata_path.exists())
@@ -243,18 +250,22 @@ class LDaCATabulator:
                 if corpus_name:
                     desired_folder = self._make_clean_name(corpus_name)
                     if desired_folder and desired_folder != extract_to.name:
-                        desired_extract_to = cwd / desired_folder
+                        desired_extract_to = extract_root / desired_folder
                         if desired_extract_to.exists():
-                            desired_folder, desired_db = self._unique_storage_names(cwd, desired_folder)
-                            desired_extract_to = cwd / desired_folder
+                            desired_folder, desired_db = self._unique_storage_names(
+                                extract_root,
+                                db_root,
+                                desired_folder
+                            )
+                            desired_extract_to = extract_root / desired_folder
                         else:
                             desired_db = f"{desired_folder}.db"
 
                         shutil.move(str(extract_to), str(desired_extract_to))
                         extract_to = desired_extract_to
-                        database = cwd / desired_db
+                        database = db_root / desired_db
 
-        # Build (or connect) DB
+        # Build and connect DB
         tb.crate_to_db(str(extract_to), str(database))
         return database, extract_to
     
