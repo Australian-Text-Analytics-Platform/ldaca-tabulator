@@ -66,10 +66,10 @@ def test_unzip_corpus(tmp_path, monkeypatch):
     # Assertions
     assert extracted_path.exists()
     assert len(list(extracted_path.iterdir())) > 0
-    assert db_path == Path.cwd() / "testCorpus.db"
+    assert db_path == Path.cwd() / "databases" / "testCorpus.db"
     fake_tb.crate_to_db.assert_called_once_with(
-        str(Path.cwd() / "testCorpus"),
-        str(Path.cwd() / "testCorpus.db"),
+        str(Path.cwd() / "temp" / "testCorpus"),
+        str(Path.cwd() / "databases" / "testCorpus.db"),
     )
 
 
@@ -104,11 +104,11 @@ def test_unzip_uses_metadata_name(tmp_path, monkeypatch):
             tb=fake_tb,
         )
 
-    assert extracted_path.name == "Fancy_Corpus_Name"
-    assert db_path.name == "Fancy_Corpus_Name.db"
+    assert extracted_path == Path.cwd() / "temp" / "Fancy_Corpus_Name"
+    assert db_path == Path.cwd() / "databases" / "Fancy_Corpus_Name.db"
     fake_tb.crate_to_db.assert_called_once_with(
-        str(Path.cwd() / "Fancy_Corpus_Name"),
-        str(Path.cwd() / "Fancy_Corpus_Name.db"),
+        str(Path.cwd() / "temp" / "Fancy_Corpus_Name"),
+        str(Path.cwd() / "databases" / "Fancy_Corpus_Name.db"),
     )
 
 
