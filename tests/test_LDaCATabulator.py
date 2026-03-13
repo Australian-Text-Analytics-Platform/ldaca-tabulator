@@ -1,12 +1,11 @@
+import sqlite3
+import zipfile
 from io import BytesIO
 from pathlib import Path
-import sqlite3
 from unittest.mock import MagicMock, patch
-import zipfile
 
 import pandas as pd
 import pytest
-
 from src.ldacatabulator.tabulator import LDaCATabulator
 
 
@@ -17,7 +16,7 @@ def _blank_instance():
     """
     Create an LDaCATabulator instance without running __post_init__
     to avoid running get.request() function.
-    
+
     """
     return LDaCATabulator.__new__(LDaCATabulator)
 
@@ -25,7 +24,10 @@ def _blank_instance():
 def _make_zip_bytes() -> bytes:
     buf = BytesIO()
     with zipfile.ZipFile(buf, mode="w") as zf:
-        zf.writestr("ro-crate-metadata.json", '{"@context": "https://w3id.org/ro/crate/1.1/context"}')
+        zf.writestr(
+            "ro-crate-metadata.json",
+            '{"@context": "https://w3id.org/ro/crate/1.1/context"}',
+        )
     return buf.getvalue()
 
 
@@ -112,7 +114,9 @@ def test_unzip_uses_metadata_name(tmp_path, monkeypatch):
     )
 
 
-def test_unzip_redownloads_when_cached_metadata_named_folder_exists(tmp_path, monkeypatch):
+def test_unzip_redownloads_when_cached_metadata_named_folder_exists(
+    tmp_path, monkeypatch
+):
     monkeypatch.chdir(tmp_path)
     cached = tmp_path / "ldacaCollections" / "Fancy_Corpus_Name"
     cached.mkdir(parents=True, exist_ok=True)
@@ -140,7 +144,9 @@ def test_unzip_redownloads_when_cached_metadata_named_folder_exists(tmp_path, mo
     fake_tb = MagicMock()
     tab = _blank_instance()
 
-    with patch("src.ldacatabulator.tabulator.requests.get", return_value=mock_response) as mock_get:
+    with patch(
+        "src.ldacatabulator.tabulator.requests.get", return_value=mock_response
+    ) as mock_get:
         db_path, extracted_path = LDaCATabulator._unzip_corpus(
             tab,
             zip_url="http://fake-url.com/fake-corpus.zip",
@@ -186,7 +192,9 @@ def test_unzip_refresh_reuses_same_metadata_folder_name(tmp_path, monkeypatch):
     fake_tb = MagicMock()
     tab = _blank_instance()
 
-    with patch("src.ldacatabulator.tabulator.requests.get", return_value=mock_response) as mock_get:
+    with patch(
+        "src.ldacatabulator.tabulator.requests.get", return_value=mock_response
+    ) as mock_get:
         db_path, extracted_path = LDaCATabulator._unzip_corpus(
             tab,
             zip_url="http://fake-url.com/fake-corpus.zip",
@@ -209,9 +217,7 @@ def test_unzip_refresh_reuses_same_metadata_folder_name(tmp_path, monkeypatch):
 # Test: load_config
 # --------------------------------------------------------------------
 def test_load_config():
-    config = LDaCATabulator.load_config(
-        "tests/crates/minimal/ro-crate-metadata.json"
-    )
+    config = LDaCATabulator.load_config("tests/crates/minimal/ro-crate-metadata.json")
     assert "@graph" in config
 
 
@@ -254,12 +260,7 @@ def test_load_entity_table_missing_table_returns_none(tmp_path):
 # Helper df for testing drop_id_columns
 # --------------------------------------------------------------------
 def _df_from_json_ids():
-    return pd.DataFrame({
-        "name": [],
-        "text": [],
-        "name_id": [],
-        "name_id_1": []
-    })
+    return pd.DataFrame({"name": [], "text": [], "name_id": [], "name_id_1": []})
 
 
 # --------------------------------------------------------------------
@@ -272,27 +273,23 @@ def test_drop_id_columns():
 
 
 def test_drop_high_null_columns():
-    df = pd.DataFrame(
-        {
-            "keep_edge_99pct": [None] * 99 + [1],
-            "drop_100pct": [None] * 100,
-            "keep_full": list(range(100)),
-        }
-    )
+    df = pd.DataFrame({
+        "keep_edge_99pct": [None] * 99 + [1],
+        "drop_100pct": [None] * 100,
+        "keep_full": list(range(100)),
+    })
     out = LDaCATabulator.drop_high_null_columns(df)
     assert set(out.columns) == {"keep_edge_99pct", "keep_full"}
-    
+
 
 def test_get_text():
     tab = _blank_instance()
-    raw = pd.DataFrame(
-        {
-            "text": ["a"],
-            "kept": [1],
-            "name_id": ["x"],
-            "mostly_null": [None],
-        }
-    )
+    raw = pd.DataFrame({
+        "text": ["a"],
+        "kept": [1],
+        "name_id": ["x"],
+        "mostly_null": [None],
+    })
 
     with patch.object(tab, "_load_entity_table", return_value=raw) as mock_load:
         df = tab.get_text()
@@ -343,16 +340,21 @@ def test_post_init_sets_config_and_text_prop():
     fake_tb = MagicMock()
     expected_config = {"tables": {}}
 
-    with patch.object(
-        LDaCATabulator,
-        "_unzip_corpus",
-        return_value=(Path("/tmp/rocrate.db"), Path("/tmp/rocrate")),
-    ) as mock_unzip, patch.object(
-        LDaCATabulator,
-        "load_config",
-        return_value=expected_config,
-    ) as mock_load_config:
-        tab = LDaCATabulator("https://example.com/fake.zip", text_prop="ldac:testText", tb=fake_tb)
+    with (
+        patch.object(
+            LDaCATabulator,
+            "_unzip_corpus",
+            return_value=(Path("/tmp/rocrate.db"), Path("/tmp/rocrate")),
+        ) as mock_unzip,
+        patch.object(
+            LDaCATabulator,
+            "load_config",
+            return_value=expected_config,
+        ) as mock_load_config,
+    ):
+        tab = LDaCATabulator(
+            "https://example.com/fake.zip", text_prop="ldac:testText", tb=fake_tb
+        )
 
     assert tab.database == Path("/tmp/rocrate.db")
     assert tab.extract_to == Path("/tmp/rocrate")
@@ -366,7 +368,11 @@ def test_corpus_specific_tables_list():
     tab = _blank_instance()
     tab.url = "https://example.com/~23089559.zip"
 
-    with patch.object(LDaCATabulator, "load_config", return_value={"tables": {"TableA": {}, "TableB": {}}}) as mock_cfg:
+    with patch.object(
+        LDaCATabulator,
+        "load_config",
+        return_value={"tables": {"TableA": {}, "TableB": {}}},
+    ) as mock_cfg:
         result = tab.corpus_specific_tables_list()
 
     assert "TableA" in result
@@ -390,9 +396,12 @@ def test_corpus_specific_tables_loads():
     expected_df = pd.DataFrame({"x": [1]})
     cfg = {"tables": {"MyTable": {}}}
 
-    with patch.object(LDaCATabulator, "load_config", return_value=cfg) as mock_cfg, patch.object(
-        tab, "_load_entity_table", return_value=expected_df
-    ) as mock_load_table:
+    with (
+        patch.object(LDaCATabulator, "load_config", return_value=cfg) as mock_cfg,
+        patch.object(
+            tab, "_load_entity_table", return_value=expected_df
+        ) as mock_load_table,
+    ):
         result = tab.corpus_specific_tables("MyTable")
 
     assert result.equals(expected_df)
@@ -474,6 +483,68 @@ def test_get_corpus_info_with_dict_publisher(tmp_path):
     out = tab.get_corpus_info()
 
     assert "LDaCA Publisher" in out
+
+
+def test_get_name_reads_corpus_name_from_metadata(tmp_path):
+    metadata = """
+        {
+            "@graph": [
+                {
+                    "@id": "test corpus",
+                    "@type": "Dataset",
+                    "name": "Test Corpus"
+                }
+            ]
+        }
+        """
+    metadata_path = tmp_path / "ro-crate-metadata.json"
+    metadata_path.write_text(metadata, encoding="utf-8")
+
+    tab = _blank_instance()
+    tab.url = "https://example.com/download/test%20corpus.zip"
+    tab.extract_to = tmp_path
+
+    assert tab.get_name() == "Test Corpus"
+
+
+def test_get_name_falls_back_to_preview_html_when_metadata_name_missing(tmp_path):
+    metadata = """
+        {
+            "@graph": [
+                {
+                    "@id": "test corpus",
+                    "@type": "Dataset"
+                }
+            ]
+        }
+        """
+    html = """
+        <html>
+            <body>
+                <script type="application/ld+json">
+                {
+                    "@graph": [
+                        {
+                            "@id": "test corpus",
+                            "name": "Preview Corpus Name",
+                            "description": "Corpus description",
+                            "datePublished": "2025-01-01"
+                        }
+                    ]
+                }
+                </script>
+            </body>
+        </html>
+        """
+
+    (tmp_path / "ro-crate-metadata.json").write_text(metadata, encoding="utf-8")
+    (tmp_path / "ro-crate-preview.html").write_text(html, encoding="utf-8")
+
+    tab = _blank_instance()
+    tab.url = "https://example.com/download/test%20corpus.zip"
+    tab.extract_to = tmp_path
+
+    assert tab.get_name() == "Preview Corpus Name"
 
 
 def test_names_from_url_differ():

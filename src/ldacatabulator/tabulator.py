@@ -90,7 +90,9 @@ class LDaCATabulator:
         parsed = urlparse(zip_url)
         corpus_id = unquote(Path(parsed.path).name).removesuffix(".zip")
 
-        corpus_node = next((item for item in graph if item.get("@id") == corpus_id), None)
+        corpus_node = next(
+            (item for item in graph if item.get("@id") == corpus_id), None
+        )
         if corpus_node and corpus_node.get("name"):
             return str(corpus_node["name"])
 
@@ -122,7 +124,9 @@ class LDaCATabulator:
         safe_base = LDaCATabulator._make_clean_name(base_name)
         candidate = safe_base
         idx = 2
-        while (extract_root / candidate).exists() or (db_root / f"{candidate}.db").exists():
+        while (extract_root / candidate).exists() or (
+            db_root / f"{candidate}.db"
+        ).exists():
             candidate = f"{safe_base}_{idx}"
             idx += 1
         return candidate, f"{candidate}.db"
@@ -145,7 +149,7 @@ class LDaCATabulator:
 
         try:
             data = json.loads(metadata_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+        except OSError, json.JSONDecodeError:
             return False
 
         graph = data.get("@graph", [])
@@ -155,7 +159,9 @@ class LDaCATabulator:
             return False
 
         candidates = {corpus_id, f"./{corpus_id}"}
-        return any(item.get("@id") in candidates for item in graph if isinstance(item, dict))
+        return any(
+            item.get("@id") in candidates for item in graph if isinstance(item, dict)
+        )
 
     @staticmethod
     def _find_existing_extract_for_url(extract_root: Path, zip_url: str) -> Path | None:
@@ -171,6 +177,34 @@ class LDaCATabulator:
                 return child
 
         return None
+
+    @staticmethod
+    def _get_corpus_node_from_preview(extract_to: Path, zip_url: str) -> dict | None:
+        """Read the corpus metadata node from ro-crate-preview.html, if available."""
+        html_path = extract_to / "ro-crate-preview.html"
+        if not html_path.exists():
+            return None
+
+        html_content = html_path.read_text(encoding="utf-8")
+        soup = BeautifulSoup(html_content, "html.parser")
+        script_tag = soup.find("script", type="application/ld+json")
+        if script_tag is None or script_tag.string is None:
+            return None
+
+        json_data = json.loads(script_tag.string)
+        parsed_url = urlparse(zip_url)
+        encoded_name = Path(parsed_url.path).name.removesuffix(".zip")
+        corpus_id = unquote(encoded_name)
+
+        corpus_node = next(
+            (
+                item
+                for item in json_data.get("@graph", [])
+                if item.get("@id") == corpus_id
+            ),
+            None,
+        )
+        return corpus_node if isinstance(corpus_node, dict) else None
 
     def _unzip_corpus(
         self,
@@ -355,31 +389,45 @@ class LDaCATabulator:
             df = self.drop_high_null_columns(df)
         return df
 
+    def get_name(self) -> str:
+        """Return the corpus display name from extracted RO-Crate metadata."""
+        corpus_name = self._get_corpus_name_from_metadata(self.extract_to, self.url)
+        if corpus_name:
+            return corpus_name
+
+        corpus_node = self._get_corpus_node_from_preview(self.extract_to, self.url)
+        if corpus_node and corpus_node.get("name"):
+            return str(corpus_node["name"])
+
+        if not corpus_name:
+            raise ValueError(
+                "Could not determine corpus name from ro-crate-metadata.json or ro-crate-preview.html."
+            )
+
+        return corpus_name
+
     def get_corpus_info(self):
         """Extract and return corpus metadata from the extracted RO-Crate preview HTML."""
-        parsed_url = urlparse(self.url)
-        encoded_name = Path(parsed_url.path).name.removesuffix(".zip")
-        corpus_id = unquote(encoded_name)
-
-        html_path = self.extract_to / "ro-crate-preview.html"
-        html_content = html_path.read_text(encoding="utf-8")
-
-        soup = BeautifulSoup(html_content, "html.parser")
-        script_tag = soup.find("script", type="application/ld+json")
-        if script_tag is None or script_tag.string is None:
-            raise ValueError("Could not find JSON-LD metadata in ro-crate-preview.html.")
-
-        json_data = json.loads(script_tag.string)
-        corpus_node = next(
-            (item for item in json_data.get("@graph", []) if item.get("@id") == corpus_id),
-            None,
-        )
+        corpus_node = self._get_corpus_node_from_preview(self.extract_to, self.url)
         if corpus_node is None:
+            parsed_url = urlparse(self.url)
+            encoded_name = Path(parsed_url.path).name.removesuffix(".zip")
+            corpus_id = unquote(encoded_name)
             raise ValueError(f"Could not find corpus metadata node for '{corpus_id}'.")
 
         corpus_name = corpus_node.get("name")
         corpus_description = corpus_node.get("description")
         date_published = corpus_node.get("datePublished")
+
+        html_path = self.extract_to / "ro-crate-preview.html"
+        html_content = html_path.read_text(encoding="utf-8")
+        soup = BeautifulSoup(html_content, "html.parser")
+        script_tag = soup.find("script", type="application/ld+json")
+        if script_tag is None or script_tag.string is None:
+            raise ValueError(
+                "Could not find JSON-LD metadata in ro-crate-preview.html."
+            )
+        json_data = json.loads(script_tag.string)
 
         publisher_field = corpus_node.get("publisher")
         publisher_id = None
@@ -392,10 +440,18 @@ class LDaCATabulator:
             publisher_id = publisher_field
 
         publisher_node = next(
-            (item for item in json_data.get("@graph", []) if item.get("@id") == publisher_id),
+            (
+                item
+                for item in json_data.get("@graph", [])
+                if item.get("@id") == publisher_id
+            ),
             None,
         )
-        publisher = publisher_node.get("name") if isinstance(publisher_node, dict) else "Unknown"
+        publisher = (
+            publisher_node.get("name")
+            if isinstance(publisher_node, dict)
+            else "Unknown"
+        )
 
         return (
             f"## Name: \n{corpus_name}\n\n"
@@ -423,7 +479,9 @@ class LDaCATabulator:
         """Load and return a cleaned corpus-specific table."""
         match_obj = re.search(r"~(\d+)\.", self.url)
         if not match_obj:
-            raise ValueError("Could not extract corpus ID from URL. Cannot load config.")
+            raise ValueError(
+                "Could not extract corpus ID from URL. Cannot load config."
+            )
         match = match_obj.group(1)
 
         self.tb.config = self.load_config(f"{CORPUS_CONFIG_DIR}/{match}.json")
