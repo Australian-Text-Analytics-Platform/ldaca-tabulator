@@ -200,45 +200,10 @@ class LDaCATabulator:
         overwrite: bool = True,
         ):
         """
-        Download, extract, and tabulate an RO-Crate corpus into a database.
+        Download/extract one corpus into `ldacaCollections/` and build its DB.
 
-        This function downloads a ZIP archive from a given URL of LDaCA corpus, extracts its
-        contents into a local folder, and converts the extracted RO-Crate dataset
-        into a database.
-
-        Parameters
-        ----------
-        zip_url : str
-            URL pointing to the ZIP file containing the RO-Crate corpus.
-        tb : ROCrateTabulator
-            Instance of ROCrateTabulator used to convert the extracted crate into
-            a database via `crate_to_db()`.
-        folder_name : str | None, optional
-            Name of the directory to extract the corpus into. Defaults to a
-            URL-derived folder name if not provided, and may be replaced by the
-            corpus metadata name after extraction.
-        db_name : str | None, optional
-            Name of the output SQLite database file. Defaults to
-            the inferred folder name with `.db` suffix if not provided.
-        overwrite : bool, optional
-            If `True` and the target extraction folder already exists, it will be
-            deleted and recreated before extraction. If `False` and the folder
-            already exists, no download or extraction occurs and the existing
-            folder is used. Default is `False`.
-
-        Returns
-        -------
-        tuple[pathlib.Path, pathlib.Path]
-            A tuple `(database_path, extract_path)` referring to:
-            - `database_path`: Path to the generated SQLite DB.
-            - `extract_path` : Path where the ZIP was extracted.
-
-        Notes
-        -----
-        - If `overwrite=False` and the folder already exists, the ZIP file is
-        not downloaded or re-extracted; the existing content is used.
-        - `crate_to_db()` is always called, meaning the database will be built or
-        updated regardless of extraction behavior.
+        Returns `(database_path, extract_path)`. For matching repeated requests,
+        current policy is to refresh by deleting old extracted files and DB.
         """
 
         user_provided_folder = folder_name is not None
@@ -388,23 +353,7 @@ class LDaCATabulator:
         table_name: str,
         columns: List[str] | None = None
         ):
-        """
-        Load an entity table from the extracted SQLite database.
-
-        This method checks whether the table exists in the RO-Crate, loads it
-        from the database.
-
-        Parameters
-        ----------
-        table_name : str
-            Name of the entity table to load.
-
-        Returns
-        -------
-        pandas.DataFrame or None
-            The loaded and cleaned table, or ``None`` if the table is not
-            present in the corpus.
-        """
+        """Load one entity table from SQLite and drop ID-like columns."""
         #TODO get_speaker() is giving an error when not in the corpus
         # The reason is logging. 
         try:
