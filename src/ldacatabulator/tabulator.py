@@ -21,8 +21,9 @@ from rocrate_tabular.tabulator import ROCrateTabulator
 # -------------------------
 # Constants
 # -------------------------
+GENERAL_CONFIG = "./configs/general/general-config.json"
+CORPUS_CONFIG_DIR = "./configs/corpora"
 TEXT_PROP = "ldac:mainText"
-HTML_PATH = Path("./rocrate/ro-crate-preview.html")
 
 
 # -------------------------------------------------------------
@@ -61,21 +62,115 @@ class LDaCATabulator:
     tb: ROCrateTabulator = field(default_factory=ROCrateTabulator)
 
     def __post_init__(self):
-
-        # Download and unzip
         self.database, self.extract_to = self._unzip_corpus(self.url, tb=self.tb)
 
-        self.tb.config = self._load_package_config([
-            "configs",
-            "general",
-            "general-config.json",
-        ])
+        self.tb.config = self.load_config(GENERAL_CONFIG)
 
         self.tb.text_prop = self.text_prop
 
     # -----------------------------------------------
     # Helper methods
     # -----------------------------------------------
+
+    @staticmethod
+    def _make_clean_name(value: str) -> str:
+        safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", value).strip("._-")
+        return safe_name or "rocrate"
+
+    @staticmethod
+    def _get_corpus_name_from_metadata(extract_to: Path, zip_url: str) -> str | None:
+        """Read the corpus display name from ro-crate-metadata.json, if available."""
+        metadata_path = extract_to / "ro-crate-metadata.json"
+        if not metadata_path.exists():
+            return None
+
+        data = json.loads(metadata_path.read_text(encoding="utf-8"))
+        graph = data.get("@graph", [])
+
+        parsed = urlparse(zip_url)
+        corpus_id = unquote(Path(parsed.path).name).removesuffix(".zip")
+
+        corpus_node = next((item for item in graph if item.get("@id") == corpus_id), None)
+        if corpus_node and corpus_node.get("name"):
+            return str(corpus_node["name"])
+
+        dataset_node = next(
+            (
+                item
+                for item in graph
+                if (
+                    ("Dataset" in item.get("@type", []))
+                    if isinstance(item.get("@type"), list)
+                    else item.get("@type") == "Dataset"
+                )
+                and item.get("name")
+            ),
+            None,
+        )
+        if dataset_node:
+            return str(dataset_node["name"])
+
+        return None
+
+    @staticmethod
+    def _unique_storage_names(
+        extract_root: Path,
+        db_root: Path,
+        base_name: str,
+    ) -> tuple[str, str]:
+        """Return non-conflicting folder/db names based on base_name."""
+        safe_base = LDaCATabulator._make_clean_name(base_name)
+        candidate = safe_base
+        idx = 2
+        while (extract_root / candidate).exists() or (db_root / f"{candidate}.db").exists():
+            candidate = f"{safe_base}_{idx}"
+            idx += 1
+        return candidate, f"{candidate}.db"
+
+    @staticmethod
+    def _names_from_zip_url(zip_url: str) -> tuple[str, str]:
+        """Build initial storage names from the decoded corpus filename."""
+        parsed = urlparse(zip_url)
+        base_name = unquote(Path(parsed.path).name).removesuffix(".zip") or "rocrate"
+        safe_name = LDaCATabulator._make_clean_name(base_name)
+        folder_name = safe_name
+        db_name = f"{safe_name}.db"
+        return folder_name, db_name
+
+    @staticmethod
+    def _metadata_matches_zip_url(metadata_path: Path, zip_url: str) -> bool:
+        """Return True when metadata appears to describe the corpus from zip_url."""
+        if not metadata_path.exists():
+            return False
+
+        try:
+            data = json.loads(metadata_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return False
+
+        graph = data.get("@graph", [])
+        parsed = urlparse(zip_url)
+        corpus_id = unquote(Path(parsed.path).name).removesuffix(".zip")
+        if not corpus_id:
+            return False
+
+        candidates = {corpus_id, f"./{corpus_id}"}
+        return any(item.get("@id") in candidates for item in graph if isinstance(item, dict))
+
+    @staticmethod
+    def _find_existing_extract_for_url(extract_root: Path, zip_url: str) -> Path | None:
+        """Find an already-extracted corpus folder matching zip_url."""
+        if not extract_root.exists():
+            return None
+
+        for child in extract_root.iterdir():
+            if not child.is_dir():
+                continue
+            metadata_path = child / "ro-crate-metadata.json"
+            if LDaCATabulator._metadata_matches_zip_url(metadata_path, zip_url):
+                return child
+
+        return None
 
     def _unzip_corpus(
         self,
@@ -91,63 +186,49 @@ class LDaCATabulator:
         This function downloads a ZIP archive from a given URL of LDaCA corpus, extracts its
         contents into a local folder, and converts the extracted RO-Crate dataset
         into a database.
-
-        Parameters
-        ----------
-        zip_url : str
-            URL pointing to the ZIP file containing the RO-Crate corpus.
-        tb : ROCrateTabulator
-            Instance of ROCrateTabulator used to convert the extracted crate into
-            a database via `crate_to_db()`.
-        folder_name : str | None, optional
-            Name of the directory to extract the corpus into. Defaults to
-            `"rocrate"` if not provided.
-        db_name : str | None, optional
-            Name of the output SQLite database file. Defaults to
-            `"{folder_name}.db"` if not provided.
-        overwrite : bool, optional
-            If `True` and the target extraction folder already exists, it will be
-            deleted and recreated before extraction. If `False` and the folder
-            already exists, no download or extraction occurs and the existing
-            folder is used. Default is `False`.
-
-        Returns
-        -------
-        tuple[pathlib.Path, pathlib.Path]
-            A tuple `(database_path, extract_path)` referring to:
-            - `database_path`: Path to the generated SQLite DB.
-            - `extract_path` : Path where the ZIP was extracted.
-
-        Notes
-        -----
-        - If `overwrite=False` and the folder already exists, the ZIP file is
-        not downloaded or re-extracted; the existing content is used.
-        - `crate_to_db()` is always called, meaning the database will be built or
-        updated regardless of extraction behavior.
         """
 
-        # Resolve target names
+        user_provided_folder = folder_name is not None
+        user_provided_db = db_name is not None
+
+        default_folder_name, default_db_name = self._names_from_zip_url(zip_url)
         if folder_name is None:
-            folder_name = "rocrate"
+            folder_name = default_folder_name
         if db_name is None:
-            db_name = f"{folder_name}.db"
+            db_name = default_db_name
 
         cwd = Path.cwd()
-        extract_to = cwd / folder_name
-        database = cwd / db_name
+        extract_root = cwd / "ldacaCollections"
+        db_root = cwd / "databases"
+        extract_root.mkdir(parents=True, exist_ok=True)
+        db_root.mkdir(parents=True, exist_ok=True)
 
-        # To save downloaded zip
-        zip_file = cwd / f"{folder_name}.zip"
+        extract_to = extract_root / folder_name
+        database = db_root / db_name
 
-        # Prepare destination
-        if extract_to.exists():
-            if overwrite:
-                shutil.rmtree(extract_to)
-                extract_to.mkdir(parents=True, exist_ok=True)
-        else:
+        if not user_provided_folder and not user_provided_db:
+            cached_extract = self._find_existing_extract_for_url(extract_root, zip_url)
+            if cached_extract is not None:
+                extract_to = cached_extract
+                folder_name = cached_extract.name
+                database = db_root / f"{cached_extract.name}.db"
+                overwrite = True
+            elif not overwrite and extract_to.exists():
+                overwrite = True
+
+        zip_file = extract_root / f"{folder_name}.zip"
+
+        if overwrite:
+            database.unlink(missing_ok=True)
+
+        metadata_path = extract_to / "ro-crate-metadata.json"
+        needs_download = overwrite or (not metadata_path.exists())
+
+        if extract_to.exists() and overwrite:
+            shutil.rmtree(extract_to)
+
+        if needs_download:
             extract_to.mkdir(parents=True, exist_ok=True)
-
-            # Download and extract
             with requests.get(zip_url, stream=True, timeout=20) as resp:
                 resp.raise_for_status()
                 with open(zip_file, "wb") as f:
@@ -158,98 +239,66 @@ class LDaCATabulator:
             with zipfile.ZipFile(zip_file, "r") as zf:
                 zf.extractall(extract_to)
 
-            zip_file.unlink()
+            zip_file.unlink(missing_ok=True)
 
-        # Build (or connect) DB
+            if not user_provided_folder and not user_provided_db:
+                corpus_name = self._get_corpus_name_from_metadata(extract_to, zip_url)
+                if corpus_name:
+                    desired_folder = self._make_clean_name(corpus_name)
+                    if desired_folder and desired_folder != extract_to.name:
+                        desired_extract_to = extract_root / desired_folder
+                        desired_db = f"{desired_folder}.db"
+                        if desired_extract_to.exists():
+                            if overwrite:
+                                shutil.rmtree(desired_extract_to)
+                            else:
+                                desired_folder, desired_db = self._unique_storage_names(
+                                    extract_root,
+                                    db_root,
+                                    desired_folder,
+                                )
+                                desired_extract_to = extract_root / desired_folder
+
+                        shutil.move(str(extract_to), str(desired_extract_to))
+                        extract_to = desired_extract_to
+                        database = db_root / desired_db
+
         tb.crate_to_db(str(extract_to), str(database))
         return database, extract_to
 
-    # loading config file
     @staticmethod
     def _load_package_config(path_parts: List[str]):
-        """
-        Load configuration from the package resources.
-        """
-        config_path = importlib.resources.files("ldacatabulator")
-        for part in path_parts:
-            config_path = config_path.joinpath(part)
-
-        with config_path.open("r", encoding="utf-8") as f:
-            return json.load(f)
+        """Load configuration from the package resources."""
+        return LDaCATabulator.load_config(str(Path(*path_parts)))
 
     @staticmethod
     def load_config(config_path: str):
-        """
-        Load and parse a JSON configuration file.
+        """Load and parse a JSON configuration file."""
+        path_obj = Path(config_path)
+        candidate_paths = [path_obj]
+        if not path_obj.is_absolute():
+            candidate_paths.append(Path(__file__).resolve().parents[2] / path_obj)
 
-        Parameters
-        ----------
-        config_path : str
-            Path to the JSON configuration file.
+        for candidate in candidate_paths:
+            if candidate.exists():
+                with candidate.open(encoding="utf-8") as f:
+                    return json.load(f)
 
-        Returns
-        -------
-        dict
-            Parsed configuration data.
-        """
-        with open(config_path) as f:
-            config = json.load(f)
-        return config
+        resource_path = importlib.resources.files("ldacatabulator")
+        for part in path_obj.parts:
+            resource_path = resource_path.joinpath(part)
+
+        with resource_path.open("r", encoding="utf-8") as f:
+            return json.load(f)
 
     @staticmethod
     def drop_id_columns(df):
-        """
-        Remove identifier-like columns from a pandas DataFrame.
-
-        This function drops any column whose name contains the substring "_id".
-        It is a general-purpose utility for removing ID or foreign-key columns
-        that are typically not useful for end-user analysis.
-
-        Examples of columns removed:
-            - "author_id"
-            - "conformsTo_id"
-            - "conformsTo_1_id"
-            - "author_id_1"
-            - "ldac:speaker_id"
-
-        The match is substring-based, so any column name containing "_id"
-        anywhere will be removed. Use with caution if your dataset includes
-        non-identifier fields that also contain "_id" in their names.
-
-        Parameters
-        ----------
-        df : pandas.DataFrame
-            Input DataFrame from which ID-related columns will be removed.
-
-        Returns
-        -------
-        pandas.DataFrame
-            A new DataFrame with all "_id" columns dropped. Columns that do not
-            exist are ignored safely.
-        """
+        """Remove identifier-like columns from a pandas DataFrame."""
         cols_to_drop = [c for c in df.columns if "_id" in c]
         return df.drop(columns=cols_to_drop, errors="ignore")
 
     def _load_entity_table(self, table_name: str, columns: List[str] | None = None):
-        """
-        Load an entity table from the extracted SQLite database.
-
-        This method checks whether the table exists in the RO-Crate, loads it
-        from the database.
-
-        Parameters
-        ----------
-        table_name : str
-            Name of the entity table to load.
-
-        Returns
-        -------
-        pandas.DataFrame or None
-            The loaded and cleaned table, or ``None`` if the table is not
-            present in the corpus.
-        """
-        # TODO get_speaker() is giving an error when not in the corpus
-        # The reason is logging.
+        """Load an entity table from the extracted SQLite database."""
         try:
             self.tb.entity_table(table_name)
         except Exception:
@@ -263,190 +312,106 @@ class LDaCATabulator:
                 cols = "*"
 
             query = f"SELECT {cols} FROM {table_name}"
-            # return pd.read_sql(query, conn)
             df = pd.read_sql(query, conn)
 
         return self.drop_id_columns(df)
 
     @staticmethod
     def drop_high_null_columns(df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Drop columns whose proportion of missing values exceeds a threshold of 0.99.
-
-        Parameters
-        ----------
-        df : pd.DataFrame
-            Input DataFrame.
-
-        Returns
-        -------
-        pd.DataFrame
-            DataFrame with high-null columns removed.
-        """
-        MAX_NULL_PROP = 0.99
-        if not 0 <= MAX_NULL_PROP <= 1:
+        """Drop columns whose missing-value proportion exceeds 0.99."""
+        max_null_prop = 0.99
+        if not 0 <= max_null_prop <= 1:
             raise ValueError("max_null_prop must be between 0 and 1")
 
         null_prop = df.isna().mean()
-        keep_mask = null_prop <= MAX_NULL_PROP
+        keep_mask = null_prop <= max_null_prop
+        return df.loc[:, keep_mask]
 
-        df_filtered = df.loc[:, keep_mask]
-
-        return df_filtered
-
-    # ------------------------------------------------------------
-    # Class methods
-    # ------------------------------------------------------------
-
-    # get_text() method
     def get_text(self, full_df: bool = False):
-        """
-        Load the RepositoryObject table (a table that contain text) and return it in a cleaned form.
-
-        Returns
-        -------
-        pandas.DataFrame
-        The cleaned RepositoryObject table.
-        """
-
+        """Load the RepositoryObject table and return it in cleaned form."""
         df = self._load_entity_table("RepositoryObject")
-
         if not full_df:
             df = self.drop_high_null_columns(df)
-
         return self.drop_id_columns(df)
 
-    # get_people() method
     def get_people(self, full_df: bool = False):
-        """
-        Load and return the Person table from the corpus in a cleaned form.
-
-        Returns
-        -------
-        pandas.DataFrame or None
-        The cleaned Person table, or ``None`` if the corpus does not contain
-        a Person entity.
-        """
-
+        """Load and return the Person table from the corpus in cleaned form."""
         df = self._load_entity_table("Person")
-
         if not full_df:
             df = self.drop_high_null_columns(df)
-
         return df
 
-    # get_organization() method
     def get_organization(self, full_df: bool = False):
-        """
-        Load and return the Organization table from the corpus in a cleaned form.
-
-        Returns
-        -------
-        pandas.DataFrame or None
-        The cleaned Organization table, or ``None`` if the corpus does not
-        contain an Organization entity.
-        """
+        """Load and return the Organization table from the corpus in cleaned form."""
         df = self._load_entity_table("Organization")
-
         if not full_df:
             df = self.drop_high_null_columns(df)
-
         return df
 
-    # get_speaker() method
     def get_speaker(self, full_df: bool = False):
-        """
-        Load and return the Speaker table from the corpus in a cleaned form.
-
-        Returns
-        -------
-        pandas.DataFrame or None
-        The cleaned Speaker table, or ``None`` if the corpus does not contain
-        a Speaker entity.
-        """
+        """Load and return the Speaker table from the corpus in cleaned form."""
         df = self._load_entity_table("Speaker")
-
         if not full_df:
             df = self.drop_high_null_columns(df)
-
         return df
 
-    # -------------------------------------------------------------
-    # corpus_info
-    # -------------------------------------------------------------
     def get_corpus_info(self):
-        """Extract and return corpus metadata from the RO-Crate preview HTML.
-
-        Parses the ``ro-crate-preview.html`` file for JSON-LD metadata and
-        returns a Markdown-formatted string with the corpus name, description,
-        publication date, and publisher.
-
-        Returns
-        -------
-        str
-            Markdown-formatted corpus metadata.
-        """
+        """Extract and return corpus metadata from the extracted RO-Crate preview HTML."""
         parsed_url = urlparse(self.url)
-        encoded_name = Path(parsed_url.path).name
-        encoded_name = encoded_name.removesuffix(".zip")
+        encoded_name = Path(parsed_url.path).name.removesuffix(".zip")
         corpus_id = unquote(encoded_name)
 
-        html_content = HTML_PATH.read_text(encoding="utf-8")
+        html_path = self.extract_to / "ro-crate-preview.html"
+        html_content = html_path.read_text(encoding="utf-8")
 
         soup = BeautifulSoup(html_content, "html.parser")
         script_tag = soup.find("script", type="application/ld+json")
-        json_data = json.loads(script_tag.string)
+        if script_tag is None or script_tag.string is None:
+            raise ValueError("Could not find JSON-LD metadata in ro-crate-preview.html.")
 
+        json_data = json.loads(script_tag.string)
         corpus_node = next(
             (item for item in json_data.get("@graph", []) if item.get("@id") == corpus_id),
             None,
         )
+        if corpus_node is None:
+            raise ValueError(f"Could not find corpus metadata node for '{corpus_id}'.")
 
         corpus_name = corpus_node.get("name")
         corpus_description = corpus_node.get("description")
         date_published = corpus_node.get("datePublished")
-        publisher_id = corpus_node.get("publisher")[0].get("@id")
-        publisher = next(
+
+        publisher_field = corpus_node.get("publisher")
+        publisher_id = None
+        if isinstance(publisher_field, list) and publisher_field:
+            first = publisher_field[0]
+            publisher_id = first.get("@id") if isinstance(first, dict) else first
+        elif isinstance(publisher_field, dict):
+            publisher_id = publisher_field.get("@id")
+        elif isinstance(publisher_field, str):
+            publisher_id = publisher_field
+
+        publisher_node = next(
             (item for item in json_data.get("@graph", []) if item.get("@id") == publisher_id),
             None,
-        ).get("name")
+        )
+        publisher = publisher_node.get("name") if isinstance(publisher_node, dict) else "Unknown"
 
-        markdown_content = (
+        return (
             f"## Name: \n{corpus_name}\n\n"
             f"## Description: \n{corpus_description}\n\n"
             f"## Date Published\n{date_published}\n\n"
             f"## Publisher\n{publisher}"
         )
-        return markdown_content
 
-    # -------------------------------------------------------------
-    # corpus_specific_tables
-    # -------------------------------------------------------------
     def corpus_specific_tables_list(self) -> str:
-        """
-        Return a list of corpus-specific tables defined in this corpus' config file.
-
-        This method extracts the numeric corpus identifier from the corpus URL,
-        loads the corresponding configuration file, and returns the names of the
-        tables that are specific to that corpus.
-
-        Returns
-        -------
-        str
-            A user-friendly message listing the available tables and guiding the
-            user to call ``corpus_specific_tables(table_name)`` to load the data.
-        """
-        # Extract corpus ID from the URL (digits after "~" and before ".")
+        """Return a list of corpus-specific tables defined in this corpus' config."""
         match = re.search(r"~(\d+)\.", self.url)
         if not match:
             return "Could not extract corpus ID from URL. Cannot load config."
         corpus_id = match.group(1)
 
-        # Load the specific corpus config file
-        # Adjust this path depending on how your configs are stored
-        config = self._load_package_config(["configs", "corpora", f"{corpus_id}.json"])
-
-        # Extract table names from the loaded config
+        config = self.load_config(f"{CORPUS_CONFIG_DIR}/{corpus_id}.json")
         tables = list(config.get("tables", {}).keys())
 
         return (
@@ -455,34 +420,12 @@ class LDaCATabulator:
         )
 
     def corpus_specific_tables(self, table: str):
-        """
-        Load and return a cleaned corpus-specific table.
+        """Load and return a cleaned corpus-specific table."""
+        match_obj = re.search(r"~(\d+)\.", self.url)
+        if not match_obj:
+            raise ValueError("Could not extract corpus ID from URL. Cannot load config.")
+        match = match_obj.group(1)
 
-        This method:
-        1. Extracts the numeric corpus identifier from the corpus URL.
-        2. Loads the corresponding per-corpus configuration file located at
-           ``configs/corpora/``.
-        3. Updates ``self.tb.config`` with that configuration.
-        4. Loads the requested table using ``_load_entity_table``.
-        5. Removes ID-like columns using ``drop_id_columns``.
-
-        Parameters
-        ----------
-        table : str
-            Name of the corpus-specific table to load.
-
-        Returns
-        -------
-        pandas.DataFrame
-            The cleaned DataFrame for the requested table.
-        """
-
-        match = re.search(r"~(\d+)\.", self.url).group(1)
-
-        self.tb.config = self._load_package_config([
-            "configs",
-            "corpora",
-            f"{match}.json",
-        ])
+        self.tb.config = self.load_config(f"{CORPUS_CONFIG_DIR}/{match}.json")
 
         return self._load_entity_table(table)
