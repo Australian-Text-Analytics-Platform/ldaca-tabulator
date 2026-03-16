@@ -477,7 +477,7 @@ class LDaCATabulator:
         if not full_df:
             df = self.drop_high_null_columns(df)
             
-        return self.drop_id_columns(df)
+        return df
 
     # get_people() method
     def get_people(self, full_df: bool = False):
