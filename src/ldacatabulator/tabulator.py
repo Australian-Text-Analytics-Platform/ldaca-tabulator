@@ -525,6 +525,14 @@ class LDaCATabulator:
     # -------------------------------------------------------------
     # corpus_specific_tables
     # -------------------------------------------------------------
+    
+    def _extract_corpus_id(self) -> str:
+        """ Extract corpus ID from the URL (digits after "~" and before ".") """
+        match = re.search(r"~(\d+)\.", self.url)
+        if not match:
+            raise ValueError("Could not extract corpus ID from URL.")
+        return match.group(1)
+    
     def corpus_specific_tables_list(self) -> str:
         """
         Return a list of corpus-specific tables defined in this corpus' config file.
@@ -539,11 +547,8 @@ class LDaCATabulator:
             A user-friendly message listing the available tables and guiding the
             user to call ``corpus_specific_tables(table_name)`` to load the data.
         """
-        # Extract corpus ID from the URL (digits after "~" and before ".")
-        match = re.search(r'~(\d+)\.', self.url)
-        if not match:
-            return "Could not extract corpus ID from URL. Cannot load config."
-        corpus_id = match.group(1)
+        # Extract corpus ID from the URL
+        corpus_id = self._extract_corpus_id()
 
         # Load the specific corpus config file
         # Adjust this path depending on how your configs are stored
@@ -581,9 +586,10 @@ class LDaCATabulator:
             The cleaned DataFrame for the requested table.
         """
         
-        match = re.search(r'~(\d+)\.', self.url).group(1)
+        # Extract corpus ID from the URL
+        corpus_id = self._extract_corpus_id()
     
-        self.tb.config = self.load_config(f"{CORPUS_CONFIG_DIR}{match}.json")
+        self.tb.config = self.load_config(f"{CORPUS_CONFIG_DIR}{corpus_id}.json")
         
         return self._load_entity_table(table)
     
