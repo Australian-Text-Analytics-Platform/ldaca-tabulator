@@ -453,6 +453,14 @@ class LDaCATabulator:
         df_filtered = df.loc[:, keep_mask]
 
         return df_filtered
+    
+    def _get_table(self, table_name: str, full_df: bool = False):
+        df = self._load_entity_table(table_name)
+        if df is None:
+            return None
+        if not full_df:
+            df = self.drop_high_null_columns(df)
+        return df
 
     
     # ------------------------------------------------------------
@@ -472,12 +480,7 @@ class LDaCATabulator:
         The cleaned RepositoryObject table.
         """
         
-        df = self._load_entity_table("RepositoryObject")
-        
-        if not full_df:
-            df = self.drop_high_null_columns(df)
-            
-        return df
+        return self._get_table("RepositoryObject", full_df)
 
     # get_people() method
     def get_people(self, full_df: bool = False):
@@ -491,12 +494,7 @@ class LDaCATabulator:
         a Person entity.
         """
         
-        df = self._load_entity_table("Person")
-        
-        if not full_df:
-            df = self.drop_high_null_columns(df)       
-
-        return df
+        return self._get_table("Person", full_df)
     
     # get_organization() method
     def get_organization(self, full_df: bool = False):
@@ -509,12 +507,7 @@ class LDaCATabulator:
         The cleaned Organization table, or ``None`` if the corpus does not
         contain an Organization entity.
         """
-        df = self._load_entity_table("Organization")
-        
-        if not full_df:
-            df = self.drop_high_null_columns(df)       
-
-        return df
+        return self._get_table("Organization", full_df)
     
     # get_speaker() method
     def get_speaker(self, full_df: bool = False):
@@ -527,12 +520,7 @@ class LDaCATabulator:
         The cleaned Speaker table, or ``None`` if the corpus does not contain
         a Speaker entity.
         """
-        df = self._load_entity_table("Speaker")
-        
-        if not full_df:
-            df = self.drop_high_null_columns(df)      
-        
-        return df
+        return self._get_table("Speaker", full_df)
     
     # -------------------------------------------------------------
     # corpus_specific_tables
