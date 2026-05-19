@@ -7,7 +7,6 @@ import sqlite3
 import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List
 from urllib.parse import unquote, urlparse
 
 # ========== Third-Party Dependencies ==========
@@ -301,7 +300,7 @@ class LDaCATabulator:
         return database, extract_to
 
     @staticmethod
-    def _load_package_config(path_parts: List[str]):
+    def _load_package_config(path_parts: list[str]):
         """Load configuration from the package resources."""
         return LDaCATabulator.load_config(str(Path(*path_parts)))
 
@@ -331,12 +330,11 @@ class LDaCATabulator:
         cols_to_drop = [c for c in df.columns if "_id" in c]
         return df.drop(columns=cols_to_drop, errors="ignore")
 
-    def _load_entity_table(self, table_name: str, columns: List[str] | None = None):
+    def _load_entity_table(self, table_name: str, columns: list[str] | None = None):
         """Load an entity table from the extracted SQLite database."""
         try:
             self.tb.entity_table(table_name)
         except Exception:
-            print("No %s table in this corpus.", table_name)
             return None
 
         with sqlite3.connect(self.database) as conn:
