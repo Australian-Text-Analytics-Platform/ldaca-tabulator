@@ -77,6 +77,16 @@ class LDaCATabulator:
         return safe_name or "rocrate"
 
     @staticmethod
+    def _corpus_id_from_zip_url(zip_url: str) -> str:
+        parsed = urlparse(zip_url)
+        return unquote(Path(parsed.path).name).removesuffix(".zip")
+
+    @staticmethod
+    def _quote_identifier(identifier: str) -> str:
+        escaped = identifier.replace('"', '""')
+        return f'"{escaped}"'
+
+    @staticmethod
     def _get_corpus_name_from_metadata(extract_to: Path, zip_url: str) -> str | None:
         """Read the corpus display name from ro-crate-metadata.json, if available."""
         metadata_path = extract_to / "ro-crate-metadata.json"
@@ -86,8 +96,7 @@ class LDaCATabulator:
         data = json.loads(metadata_path.read_text(encoding="utf-8"))
         graph = data.get("@graph", [])
 
-        parsed = urlparse(zip_url)
-        corpus_id = unquote(Path(parsed.path).name).removesuffix(".zip")
+        corpus_id = LDaCATabulator._corpus_id_from_zip_url(zip_url)
 
         corpus_node = next(
             (item for item in graph if item.get("@id") == corpus_id), None
@@ -133,8 +142,7 @@ class LDaCATabulator:
     @staticmethod
     def _names_from_zip_url(zip_url: str) -> tuple[str, str]:
         """Build initial storage names from the decoded corpus filename."""
-        parsed = urlparse(zip_url)
-        base_name = unquote(Path(parsed.path).name).removesuffix(".zip") or "rocrate"
+        base_name = LDaCATabulator._corpus_id_from_zip_url(zip_url) or "rocrate"
         safe_name = LDaCATabulator._make_clean_name(base_name)
         folder_name = safe_name
         db_name = f"{safe_name}.db"
@@ -152,8 +160,7 @@ class LDaCATabulator:
             return False
 
         graph = data.get("@graph", [])
-        parsed = urlparse(zip_url)
-        corpus_id = unquote(Path(parsed.path).name).removesuffix(".zip")
+        corpus_id = LDaCATabulator._corpus_id_from_zip_url(zip_url)
         if not corpus_id:
             return False
 
@@ -191,9 +198,7 @@ class LDaCATabulator:
             return None
 
         json_data = json.loads(script_tag.string)
-        parsed_url = urlparse(zip_url)
-        encoded_name = Path(parsed_url.path).name.removesuffix(".zip")
-        corpus_id = unquote(encoded_name)
+        corpus_id = LDaCATabulator._corpus_id_from_zip_url(zip_url)
 
         corpus_node = next(
             (
@@ -339,11 +344,11 @@ class LDaCATabulator:
 
         with sqlite3.connect(self.database) as conn:
             if columns:
-                cols = ", ".join(f'"{c}"' for c in columns)
+                cols = ", ".join(self._quote_identifier(c) for c in columns)
             else:
                 cols = "*"
 
-            query = f"SELECT {cols} FROM {table_name}"
+            query = f"SELECT {cols} FROM {self._quote_identifier(table_name)}"
             df = pd.read_sql(query, conn)
 
         return self.drop_id_columns(df)
@@ -352,40 +357,39 @@ class LDaCATabulator:
     def drop_high_null_columns(df: pd.DataFrame) -> pd.DataFrame:
         """Drop columns whose missing-value proportion exceeds 0.99."""
         max_null_prop = 0.99
-        if not 0 <= max_null_prop <= 1:
-            raise ValueError("max_null_prop must be between 0 and 1")
-
         null_prop = df.isna().mean()
         keep_mask = null_prop <= max_null_prop
         return df.loc[:, keep_mask]
 
-    def get_text(self, full_df: bool = False):
-        """Load the RepositoryObject table and return it in cleaned form."""
-        df = self._load_entity_table("RepositoryObject")
+    def _load_clean_entity_table(
+        self,
+        table_name: str,
+        full_df: bool = False,
+        *,
+        drop_ids: bool = False,
+    ):
+        df = self._load_entity_table(table_name)
         if not full_df:
             df = self.drop_high_null_columns(df)
-        return self.drop_id_columns(df)
+        if drop_ids:
+            df = self.drop_id_columns(df)
+        return df
+
+    def get_text(self, full_df: bool = False):
+        """Load the RepositoryObject table and return it in cleaned form."""
+        return self._load_clean_entity_table("RepositoryObject", full_df, drop_ids=True)
 
     def get_people(self, full_df: bool = False):
         """Load and return the Person table from the corpus in cleaned form."""
-        df = self._load_entity_table("Person")
-        if not full_df:
-            df = self.drop_high_null_columns(df)
-        return df
+        return self._load_clean_entity_table("Person", full_df)
 
     def get_organization(self, full_df: bool = False):
         """Load and return the Organization table from the corpus in cleaned form."""
-        df = self._load_entity_table("Organization")
-        if not full_df:
-            df = self.drop_high_null_columns(df)
-        return df
+        return self._load_clean_entity_table("Organization", full_df)
 
     def get_speaker(self, full_df: bool = False):
         """Load and return the Speaker table from the corpus in cleaned form."""
-        df = self._load_entity_table("Speaker")
-        if not full_df:
-            df = self.drop_high_null_columns(df)
-        return df
+        return self._load_clean_entity_table("Speaker", full_df)
 
     def get_name(self) -> str:
         """Return the corpus display name from extracted RO-Crate metadata."""
@@ -408,9 +412,7 @@ class LDaCATabulator:
         """Extract and return corpus metadata from the extracted RO-Crate preview HTML."""
         corpus_node = self._get_corpus_node_from_preview(self.extract_to, self.url)
         if corpus_node is None:
-            parsed_url = urlparse(self.url)
-            encoded_name = Path(parsed_url.path).name.removesuffix(".zip")
-            corpus_id = unquote(encoded_name)
+            corpus_id = self._corpus_id_from_zip_url(self.url)
             raise ValueError(f"Could not find corpus metadata node for '{corpus_id}'.")
 
         corpus_name = corpus_node.get("name")
